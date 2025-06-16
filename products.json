@@ -1,0 +1,39 @@
+[
+  {
+    "id": 1,
+    "name": "Tableros electronicos P10",
+    "price": 330000.0,
+    "category": "led",
+    "description": "Tableros De Un Solo Color",
+    "stock": 5,
+    "image_url": ""
+  },
+  {
+    "id": 2,
+    "name": "Tableros electronicos RGB",
+    "price": 480000.0,
+    "category": "led",
+    "description": "Tableros De Luz RGB",
+    "stock": 3,
+    "image_url": ""
+  },
+  {
+    "id": 3,
+    "name": "Diseños Neos Personalizados",
+    "price": 50000.0,
+    "category": "neon",
+    "description": "Personaliza Tu Logo En Neon",
+    "stock": 5,
+    "image_url": ""
+  },
+  {
+    "id": 4,
+    "name": "Pantallas Para Imagenes Y Video",
+    "price": 1500000.0,
+    "category": "led",
+    "description": "Programarble Desde el Celular",
+    "updated_at": "2025-06-14T16:31:39.159703",
+    "stock": 6,
+    "image_url": ""
+  }
+]

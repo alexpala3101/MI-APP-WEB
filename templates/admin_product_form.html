@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - Admin{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+        <h2 class="text-3xl font-bold text-center mb-6 text-gray-800">{{ title }}</h2>
+        <form method="POST">
+            <div class="mb-4">
+                <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Nombre del Producto:</label>
+                <input type="text" id="name" name="name" value="{{ product.name if product else '' }}" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="mb-4">
+                <label for="description" class="block text-gray-700 text-sm font-bold mb-2">Descripción:</label>
+                <textarea id="description" name="description" rows="4" required
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">{{ product.description if product else '' }}</textarea>
+            </div>
+            <div class="mb-4">
+                <label for="price" class="block text-gray-700 text-sm font-bold mb-2">Precio:</label>
+                <input type="number" id="price" name="price" value="{{ '%.2f'|format(product.price) if product else '' }}" step="0.01" min="0" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="mb-4">
+                <label for="stock" class="block text-gray-700 text-sm font-bold mb-2">Stock:</label>
+                <input type="number" id="stock" name="stock" value="{{ product.stock if product else '' }}" min="0" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="mb-4">
+                <label for="image_url" class="block text-gray-700 text-sm font-bold mb-2">URL de la Imagen:</label>
+                <input type="url" id="image_url" name="image_url" value="{{ product.image_url if product else '' }}" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            </div>
+             <div class="mb-6">
+                <label for="category" class="block text-gray-700 text-sm font-bold mb-2">Categoría:</label>
+                <input type="text" id="category" name="category" value="{{ product.category if product and product.category else 'Sin categoría' }}" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="flex justify-between items-center">
+                <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow-md font-semibold">
+                    <i class="fas fa-save mr-2"></i>{{ 'Actualizar' if product else 'Agregar' }} Producto
+                </button>
+                <a href="{{ url_for('admin_products.manage_products') }}" class="text-gray-600 hover:text-gray-800 transition font-medium">
+                    <i class="fas fa-arrow-left mr-2"></i>Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "type": "Bug",
+    "user": "usuario1",
+    "date": "2024-05-10",
+    "status": "En Progreso",
+    "description": "El botón de agregar al carrito no funciona en la página de productos.",
+    "admin_response": "ya se esta arreglando",
+    "status_history": [
+      {
+        "timestamp": "2025-06-16T14:03:53.022091",
+        "status": "En Progreso",
+        "response": "ya se esta arreglando",
+        "admin": "admin"
+      },
+      {
+        "timestamp": "2025-06-16T14:03:58.660838",
+        "status": "En Progreso",
+        "response": "ya se esta arreglando",
+        "admin": "admin"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "type": "Sugerencia",
+    "user": "usuario2",
+    "date": "2024-05-08",
+    "status": "Cerrado",
+    "description": "Me gustaría ver más opciones de filtrado en la sección de productos.",
+    "admin_response": "Gracias por tu sugerencia. Hemos tomado nota para futuras actualizaciones."
+  },
+  {
+    "id": 3,
+    "type": "Problema de Pago",
+    "user": "usuario3",
+    "date": "2024-05-05",
+    "status": "En Progreso",
+    "description": "Mi pago fue rechazado pero el dinero se descontó de mi cuenta.",
+    "admin_response": "Estamos investigando tu problema de pago y te contactaremos pronto con una solución."
+  },
+  {
+    "id": 4,
+    "type": "Consulta",
+    "user": "usuario1",
+    "date": "2024-05-03",
+    "status": "Abierto",
+    "description": "¿Hay una forma de guardar productos en una lista de deseos?",
+    "admin_response": ""
+  }
+]

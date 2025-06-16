@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Gestionar Productos - Admin{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Gestión de Productos</h1>
+        <a href="{{ url_for('admin_products.add_product') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
+            <i class="fas fa-plus-circle mr-2"></i>Agregar Nuevo Producto
+        </a>
+    </div>
+
+    {% if products %}
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="table-responsive">
+            <table class="w-full text-left table-auto">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                        <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                        <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                        <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                        <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for product in products %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ product.id | default('') }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <img class="h-10 w-10 rounded-full object-cover mr-3" src="{{ product.image_url | default('https://placehold.co/40x40/e2e8f0/64748b?text=Img') }}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/e2e8f0/64748b?text=Img';" alt="{{ product.name | default('Producto sin nombre') }}">
+                                <div class="text-sm font-medium text-gray-900">{{ product.name | default('Producto sin nombre') }}</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ "%.2f"|format(product.price | default(0)) }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if product.stock | default(0) < 10 %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                {{ product.stock | default(0) }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.get('category', 'Sin categoría') }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center space-x-2">
+                            <a href="{{ url_for('admin_products.edit_product', product_id=product.id | default(0)) }}" class="text-indigo-600 hover:text-indigo-900">
+                                <i class="fas fa-edit mr-1"></i>Editar
+                            </a>
+                            <form action="{{ url_for('admin_products.delete_product', product_id=product.id | default(0)) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este producto?');">
+                                <button type="submit" class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash-alt mr-1"></i>Eliminar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-12 bg-white rounded-lg shadow-md">
+        <i class="fas fa-boxes text-gray-400 text-6xl mb-4"></i>
+        <h2 class="text-2xl font-semibold text-gray-600 mb-4">No hay productos para gestionar.</h2>
+        <p class="text-gray-500 mb-6">Empieza añadiendo tu primer producto.</p>
+        <a href="{{ url_for('admin_products.add_product') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
+            <i class="fas fa-plus-circle mr-2"></i>Agregar Nuevo Producto
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

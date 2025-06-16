@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "user_username": "usuario1",
+    "timestamp": "2025-06-16 17:08:21",
+    "total": 480000.0,
+    "items": [
+      {
+        "product_id": 2,
+        "name": "Tableros electronicos RGB",
+        "price": 480000.0,
+        "quantity": 1,
+        "image_url": ""
+      }
+    ],
+    "status": "Completado"
+  },
+  {
+    "id": 2,
+    "user_username": "usuario1",
+    "timestamp": "2025-06-16 17:24:51",
+    "total": 960000.0,
+    "items": [
+      {
+        "product_id": 2,
+        "name": "Tableros electronicos RGB",
+        "price": 480000.0,
+        "quantity": 2,
+        "image_url": ""
+      }
+    ],
+    "status": "Completado",
+    "delivery_address": "calle 43 #56-64 apt301"
+  }
+]

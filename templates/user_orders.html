@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Mis Pedidos - Marketplace{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">📦 Mis Pedidos</h1>
+        <a href="{{ url_for('user_auth.user_dashboard') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
+            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+        </a>
+    </div>
+
+    {% if orders %}
+    <div class="space-y-6">
+        {% for order in orders %}
+        <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Pedido #{{ order.id | default('N/A') }}</h2>
+                    <p class="text-sm text-gray-600">Fecha: {{ order.timestamp | default('N/A') }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-lg font-bold text-blue-600">Total: ${{ "%.2f"|format(order.total | default(0)) }}</p>
+                    <span class="text-sm font-medium px-3 py-1 rounded-full 
+                        {% if order.status == 'Completado' %}bg-green-100 text-green-800
+                        {% elif order.status == 'En Progreso' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ order.status | default('Estado Desconocido') }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mb-4 text-gray-700">
+                <p class="font-semibold">Dirección de Entrega:</p>
+                <p>{{ order.delivery_address | default('No especificada') }}</p>
+            </div>
+
+            <h3 class="text-lg font-medium text-gray-800 mb-3">Artículos del Pedido:</h3>
+            <div class="divide-y divide-gray-100">
+                {# CORRECCIÓN: Usar order['items'] para acceder a la lista de artículos #}
+                {% for item in order['items'] %}
+                <div class="flex items-center py-2">
+                    <img src="{{ item.image_url | default('https://placehold.co/40x40/e2e8f0/64748b?text=No+Img') }}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/e2e8f0/64748b?text=No+Img';" alt="{{ item.name | default('Artículo') }}" class="w-10 h-10 object-cover rounded-md mr-3">
+                    <div class="flex-1">
+                        <p class="text-gray-800">{{ item.name | default('Artículo sin nombre') }}</p>
+                        <p class="text-sm text-gray-600">{{ item.quantity | default(0) }} x ${{ "%.2f"|format(item.price | default(0)) }}</p>
+                    </div>
+                    <span class="font-medium text-gray-900">${{ "%.2f"|format(item.price | default(0) * item.quantity | default(0)) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12 bg-white rounded-lg shadow-md">
+        <i class="fas fa-box-open text-gray-400 text-6xl mb-4"></i>
+        <h2 class="text-2xl font-semibold text-gray-600 mb-4">Aún no tienes pedidos.</h2>
+        <p class="text-gray-500 mb-6">¡Empieza a explorar nuestros productos y haz tu primera compra!</p>
+        <a href="{{ url_for('products') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow">
+            <i class="fas fa-store mr-2"></i>Ir a la Tienda
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

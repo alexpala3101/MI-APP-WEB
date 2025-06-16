@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Privacidad{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8 bg-white rounded-lg shadow-lg mt-8">
+    <div class="header text-center mb-8 bg-indigo-100 p-6 rounded-lg">
+        <h1 class="text-3xl font-bold text-indigo-800 mb-2">🛡️ Privacidad</h1>
+        <p class="text-xl text-indigo-600">Configuración de privacidad y protección de datos</p>
+    </div>
+    
+    <div class="privacy-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+        <h3 class="text-xl font-semibold text-gray-800 mb-3 flex items-center"><i class="fas fa-lock mr-2"></i> Protección de Datos</h3>
+        <p class="text-gray-700 mb-4">Nos tomamos muy en serio la seguridad de tu información. Tus datos están protegidos con encriptación avanzada y solo tú puedes acceder a tu información personal. No compartimos tus datos con terceros sin tu consentimiento explícito.</p>
+    </div>
+
+    <div class="privacy-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+        <h3 class="text-xl font-semibold text-gray-800 mb-3 flex items-center"><i class="fas fa-envelope-open-text mr-2"></i> Comunicaciones</h3>
+        <p class="text-gray-700 mb-4">Tienes control total sobre las comunicaciones que recibes de nosotros. Puedes gestionar tus preferencias de correo electrónico y notificaciones en la sección de 'Configuración de Cuenta' de tu perfil.</p>
+    </div>
+
+    <div class="privacy-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8">
+        <h3 class="text-xl font-semibold text-gray-800 mb-3 flex items-center"><i class="fas fa-trash-alt mr-2"></i> Eliminación de Datos</h3>
+        <p class="text-gray-700 mb-4">Si en algún momento decides que ya no deseas utilizar nuestros servicios, puedes solicitar la eliminación de tu cuenta y todos tus datos asociados. Contáctanos a través del soporte para iniciar este proceso.</p>
+    </div>
+
+    <div class="text-center">
+        <a href="{{ url_for('user_auth.user_dashboard') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition shadow-md">
+            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

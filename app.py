@@ -1,1062 +1,495 @@
-from flask import Flask, render_template_string, jsonify, request, session, redirect, url_for
+# app.py - Main Flask Application with Enhanced Features
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
 import json
-from datetime import datetime
 import os
+from datetime import datetime, timedelta
+import secrets
 from functools import wraps
+import logging
+import re
 
+# Importar tus módulos existentes (Blueprints)
+from user_auth import (
+    user_bp, user_required, add_notification, load_payment_methods, 
+    get_cart, add_to_cart, remove_from_cart, update_cart_quantity, 
+    clear_user_persistent_cart, load_user_carts, load_users # IMPORTAR load_users
+) 
+from admin_products import admin_products_bp, admin_required
+
+# Configurar el logging para ver mensajes informativos y errores
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Inicializar la aplicación Flask
 app = Flask(__name__)
-app.secret_key = 'tu_clave_secreta_aqui'  # Cambia esto por una clave segura
+app.secret_key = secrets.token_hex(32)
 
-# Configuración de administradores
-ADMIN_CREDENTIALS = {
-    'admin': 'admin123',  # Cambia estas credenciales
-    'led_admin': 'led2025'
-}
+# Configuración de archivos de datos
+ADMIN_FILE = 'admin_users.json'
+PRODUCTS_FILE = 'products.json'
+REPORTS_FILE = 'reports.json' 
+ORDERS_FILE = 'user_orders.json' 
+CART_SESSION_KEY = 'cart' 
 
-def admin_required(f):
-    """Decorador para rutas que requieren autenticación de administrador"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'admin_logged_in' not in session:
-            return redirect(url_for('admin_login'))
-        return f(*args, **kwargs)
-    return decorated_function
+app.permanent_session_lifetime = timedelta(days=31)
 
-# Enhanced HTML Template with admin panel
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ titulo }}</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px 0;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
-
-        header h1 {
-            font-size: 2.5em;
-            font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 15px;
-        }
-
-        .nav-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-        }
-
-        .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .admin-btn {
-            background: rgba(255, 215, 0, 0.3);
-            border: 2px solid #ffd700;
-        }
-
-        .admin-btn:hover {
-            background: rgba(255, 215, 0, 0.5);
-        }
-
-        main {
-            padding: 40px 0;
-        }
-
-        .welcome-section {
-            text-align: center;
-            background: white;
-            margin: 20px 0;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-
-        .welcome-section h2 {
-            font-size: 2em;
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-
-        .welcome-section p {
-            font-size: 1.2em;
-            margin-bottom: 30px;
-            color: #666;
-        }
-
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin: 30px 0;
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.1em;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-
-        .btn.secondary {
-            background: linear-gradient(45deg, #11998e, #38ef7d);
-        }
-
-        .btn.danger {
-            background: linear-gradient(45deg, #fd746c, #ff9068);
-        }
-
-        .marketplace-section {
-            background: white;
-            margin: 30px 0;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-
-        .marketplace-section h3 {
-            color: #667eea;
-            margin-bottom: 25px;
-            font-size: 1.8em;
-            text-align: center;
-        }
-
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .product-card {
-            background: #f8f9ff;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            transition: transform 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .product-card:hover {
-            transform: translateY(-5px);
-            border-color: #667eea;
-        }
-
-        .product-card h4 {
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .product-card .price {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #11998e;
-            margin: 10px 0;
-        }
-
-        .api-section {
-            background: #2c3e50;
-            color: white;
-            margin: 30px 0;
-            padding: 40px;
-            border-radius: 20px;
-        }
-
-        .api-section h3 {
-            color: #3498db;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-
-        .api-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .api-btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .api-btn:hover {
-            background: #2980b9;
-        }
-
-        #apiResult {
-            background: #34495e;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #3498db;
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        #messageArea {
-            margin: 20px 0;
-            padding: 15px;
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 10px;
-            color: #155724;
-            text-align: center;
-            display: none;
-        }
-
-        footer {
-            background: rgba(0,0,0,0.8);
-            color: white;
-            text-align: center;
-            padding: 30px 0;
-            margin-top: 50px;
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .api-buttons {
-                flex-direction: column;
+def init_admin_users():
+    """Inicializa el archivo de usuarios administradores con un administrador por defecto si no existe."""
+    if not os.path.exists(ADMIN_FILE):
+        default_admin = {
+            'admin': {
+                'username': 'admin',
+                'password': generate_password_hash('admin123'), 
+                'email': 'admin@marketplace.com',
+                'role': 'admin',
+                'created_at': datetime.now().isoformat()
             }
         }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <h1>{{ mensaje }}</h1>
-                <div class="nav-buttons">
-                    <button class="nav-btn" onclick="scrollToSection('marketplace')">Mercado</button>
-                    <button class="nav-btn" onclick="scrollToSection('catalogo')">CATALOGO</button>
-                    <button class="nav-btn admin-btn" onclick="window.location.href='/admin'">👨‍💼 Admin</button>
-                </div>
-            </div>
-        </div>
-    </header>
+        try:
+            with open(ADMIN_FILE, 'w', encoding='utf-8') as f:
+                json.dump(default_admin, f, indent=2, ensure_ascii=False)
+            logger.info("Archivo de usuarios administradores inicializado con admin por defecto.")
+        except Exception as e:
+            logger.error(f"Error al inicializar el archivo de usuarios administradores: {e}")
 
-    <main class="container">
-        <section class="welcome-section">
-            <h2>🛍️ Mercado Digital LED</h2>
-            <p>Tu plataforma completa para comprar y reparar productos digitales de alta calidad</p>
-            
-            <div class="action-buttons">
-                <button class="btn" onclick="showMessage('¡Bienvenido al mercado!')">Explorar Productos</button>
-                <button class="btn secondary" onclick="showMessage('Función de venta próximamente')">Vender Producto</button>
-                <button class="btn danger" onclick="clearMessage()">Limpiar Mensajes</button>
-            </div>
-            
-            <div id="messageArea"></div>
-        </section>
+def load_admin_users():
+    """Carga los usuarios administradores desde el archivo JSON."""
+    try:
+        with open(ADMIN_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        init_admin_users()
+        return load_admin_users()
+    except Exception as e:
+        logger.error(f"Error al cargar usuarios administradores: {e}")
+        return {}
 
-        <section id="marketplace" class="marketplace-section">
-            <h3>🏪 Productos Destacados</h3>
-            <div class="products-grid">
-                <div class="product-card">
-                    <h4>📺 Tableros electronicos P10</h4>
-                    <p>Tableros De Un Solo Color</p>
-                    <div class="price">$330.000 Interior  $380.000 Exterior</div>
-                    <button class="btn" onclick="selectProduct('Tableros electronicos', 299)">Ver Detalles</button>
-                </div>
-                <div class="product-card">
-                    <h4>📺 Tableros electronicos </h4>
-                    <p>Tableros De Luz RGB </p>
-                    <div class="price">$480.000 InteriorP5 $580.000 ExteriorP6</div>
-                    <button class="btn" onclick="selectProduct('Tableros electronicos', 299)">Ver Detalles</button>
-                </div>
-                <div class="product-card">
-                    <h4>🎨 Diseños Neos Personalizados</h4>
-                    <p>Personaliza Tu Logo En Neon</p>
-                    <div class="price">$50.000 para adelante</div>
-                    <button class="btn" onclick="selectProduct('Diseño Neon Personalizados', 149)">Ver Detalles</button>
-                </div>
-                
-                <div class="product-card">
-                    <h4>🖥️ Pantallas Para Imagenes Y Video</h4>
-                    <p> Programarble Desde el Celular </p>
-                    <div class="price">$1.500.000</div>
-                    <button class="btn" onclick="selectProduct('Bot de Automatización', 99)">Ver Detalles</button>
-                </div>
-            </div>
-        </section>
-
-        <section id="api" class="api-section">
-            <h3>🔧 Pruebas de API</h3>
-            <div class="api-buttons">
-                <button class="api-btn" onclick="testAPI('GET')">📥 Test GET</button>
-                <button class="api-btn" onclick="testAPI('POST')">📤 Test POST</button>
-                <button class="api-btn" onclick="testAPI('STATUS')">📊 Estado del Sistema</button>
-                <button class="api-btn" onclick="testAPI('PRODUCTS')">🛍️ Obtener Productos</button>
-            </div>
-            <div id="apiResult">Presiona un botón para probar la API...</div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 LED Digital Marketplace - Todo Lo Que Necesites</p>
-            <p>🚀 Flask • ⚡ JavaScript • 🎨 CSS3</p>
-        </div>
-    </footer>
-
-    <script>
-        // Message functions
-        function showMessage(message) {
-            const messageArea = document.getElementById('messageArea');
-            messageArea.textContent = message;
-            messageArea.style.display = 'block';
-            messageArea.style.background = '#d4edda';
-            messageArea.style.color = '#155724';
-            
-            // Auto-hide after 3 seconds
-            setTimeout(() => {
-                messageArea.style.display = 'none';
-            }, 3000);
-        }
-
-        function clearMessage() {
-            const messageArea = document.getElementById('messageArea');
-            messageArea.style.display = 'none';
-        }
-
-        // Product selection
-        function selectProduct(name, price) {
-            showMessage(`Producto seleccionado: ${name} - $${price}`);
-        }
-
-        // Smooth scrolling
-        function scrollToSection(sectionId) {
-            const element = document.getElementById(sectionId);
-            if (element) {
-                element.scrollIntoView({
-                    behavior: 'smooth'
-                });
+def load_products():
+    """Carga los productos desde el archivo JSON. Si no existe, crea algunos productos de ejemplo."""
+    if not os.path.exists(PRODUCTS_FILE):
+        sample_products = [
+            {
+                "id": 1,
+                "name": "Laptop Gaming",
+                "description": "Potente laptop para gaming con GPU dedicada y pantalla de 144Hz.",
+                "price": 1299.99,
+                "stock": 15,
+                "image_url": "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=400&h=300&fit=crop",
+                "category": "Electrónicos"
+            },
+            {
+                "id": 2,
+                "name": "Smartphone Pro",
+                "description": "Teléfono inteligente de última generación con cámara profesional y batería de larga duración.",
+                "price": 899.99,
+                "stock": 25,
+                "image_url": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=300&fit=crop",
+                "category": "Electrónicos"
+            },
+            {
+                "id": 3,
+                "name": "Auriculares Bluetooth",
+                "description": "Auriculares inalámbricos con cancelación de ruido activa y sonido de alta fidelidad.",
+                "price": 199.99,
+                "stock": 50,
+                "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop",
+                "category": "Audio"
+            },
+            {
+                "id": 4,
+                "name": "Smartwatch Deportivo",
+                "description": "Reloj inteligente con monitor de frecuencia cardíaca, GPS y seguimiento de actividad.",
+                "price": 249.00,
+                "stock": 30,
+                "image_url": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&h=300&fit=crop",
+                "category": "Wearables"
+            },
+            {
+                "id": 5,
+                "name": "Tableta Gráfica",
+                "description": "Tableta profesional para diseño gráfico y dibujo digital, con alta precisión.",
+                "price": 349.50,
+                "stock": 10,
+                "image_url": "https://images.unsplash.com/photo-1588019777085-f55a109a25b2?w=400&h=300&fit=crop",
+                "category": "Creatividad"
             }
-        }
+        ]
+        try:
+            with open(PRODUCTS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(sample_products, f, indent=2, ensure_ascii=False)
+            logger.info("Archivo de productos inicializado con productos de ejemplo.")
+            return sample_products
+        except Exception as e:
+            logger.error(f"Error al guardar productos de ejemplo: {e}")
+            return []
+    try:
+        with open(PRODUCTS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Error al cargar productos desde el archivo: {e}")
+        return []
 
-        // Enhanced API testing
-        async function testAPI(type) {
-            const resultDiv = document.getElementById('apiResult');
-            resultDiv.textContent = '⏳ Enviando solicitud...';
+def load_reports():
+    """Carga los reportes desde el archivo JSON. Si no existe, crea algunos reportes de ejemplo."""
+    if not os.path.exists(REPORTS_FILE):
+        sample_reports = [
+            {"id": 1, "type": "Bug", "user": "usuario1", "date": "2024-05-10", "status": "Abierto", "description": "El botón de agregar al carrito no funciona en la página de productos.", "admin_response": ""},
+            {"id": 2, "type": "Sugerencia", "user": "usuario2", "date": "2024-05-08", "status": "Cerrado", "description": "Me gustaría ver más opciones de filtrado en la sección de productos.", "admin_response": "Gracias por tu sugerencia. Hemos tomado nota para futuras actualizaciones."},
+            {"id": 3, "type": "Problema de Pago", "user": "usuario3", "date": "2024-05-05", "status": "En Progreso", "description": "Mi pago fue rechazado pero el dinero se descontó de mi cuenta.", "admin_response": "Estamos investigando tu problema de pago y te contactaremos pronto con una solución."},
+            {"id": 4, "type": "Consulta", "user": "usuario1", "date": "2024-05-03", "status": "Abierto", "description": "¿Hay una forma de guardar productos en una lista de deseos?", "admin_response": ""},
+        ]
+        try:
+            with open(REPORTS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(sample_reports, f, indent=2, ensure_ascii=False)
+            logger.info("Archivo de reportes inicializado con reportes de ejemplo.")
+            return sample_reports
+        except Exception as e:
+            logger.error(f"Error al guardar reportes de ejemplo: {e}")
+            return []
+    try:
+        with open(REPORTS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Error al cargar reportes desde el archivo: {e}")
+        return []
 
-            try {
-                let response;
-                let url;
-                let options = {};
+def save_reports(reports):
+    """Guarda los reportes en el archivo JSON."""
+    try:
+        with open(REPORTS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(reports, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"Error al guardar reportes: {e}")
+        return False
 
-                switch(type) {
-                    case 'GET':
-                        url = '/api/test';
-                        break;
-                    case 'POST':
-                        url = '/api/test';
-                        options = {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                nombre: 'Usuario de prueba',
-                                timestamp: new Date().toISOString(),
-                                action: 'marketplace_test'
-                            })
-                        };
-                        break;
-                    case 'STATUS':
-                        url = '/status';
-                        break;
-                    case 'PRODUCTS':
-                        url = '/api/products';
-                        break;
-                }
+def load_orders():
+    """Carga los pedidos desde el archivo JSON. Si no existe, crea un archivo vacío."""
+    if not os.path.exists(ORDERS_FILE):
+        with open(ORDERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f, indent=2, ensure_ascii=False)
+        return []
+    try:
+        with open(ORDERS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Error al cargar pedidos: {e}")
+        return []
 
-                response = await fetch(url, options);
-                const data = await response.json();
-                
-                const timestamp = new Date().toLocaleString();
-                const result = `🕒 ${timestamp}
-📡 Endpoint: ${url}
-🔥 Método: ${options.method || 'GET'}
-✅ Status: ${response.status} ${response.statusText}
+def save_orders(orders):
+    """Guarda los pedidos en el archivo JSON."""
+    try:
+        with open(ORDERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(orders, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"Error al guardar pedidos: {e}")
+        return False
 
-📋 Respuesta:
-${JSON.stringify(data, null, 2)}`;
-                
-                resultDiv.textContent = result;
-                resultDiv.style.borderLeftColor = response.ok ? '#27ae60' : '#e74c3c';
-                
-            } catch (error) {
-                resultDiv.textContent = `❌ Error: ${error.message}`;
-                resultDiv.style.borderLeftColor = '#e74c3c';
-            }
-        }
+def get_cart_total():
+    """Calcula el valor total del carrito."""
+    cart = get_cart() 
+    return sum(item['price'] * item['quantity'] for item in cart.values())
 
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 LED Digital Marketplace cargado correctamente');
-        });
-    </script>
-</body>
-</html>
-"""
+def clear_cart_session():
+    """Limpia el carrito de compras de la sesión (usado internamente por Flask)."""
+    if CART_SESSION_KEY in session:
+        session.pop(CART_SESSION_KEY)
+        session.permanent = True 
 
-# Admin Login Template
-ADMIN_LOGIN_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - LED Digital</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .login-header h1 {
-            color: #667eea;
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        .login-header p {
-            color: #666;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
-        }
-
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e1e1;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-        }
-
-        input[type="text"]:focus, input[type="password"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            width: 100%;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .back-link a {
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        .back-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="login-header">
-            <h1>👨‍💼 Panel de Administrador</h1>
-            <p>Ingresa tus credenciales para continuar</p>
-        </div>
-        
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
-        
-        <form method="POST">
-            <div class="form-group">
-                <label for="username">Usuario:</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Contraseña:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit" class="btn">🔓 Iniciar Sesión</button>
-        </form>
-        
-        <div class="back-link">
-            <a href="/">← Volver al Marketplace</a>
-        </div>
-    </div>
-</body>
-</html>
-"""
-
-# Admin Dashboard Template
-ADMIN_DASHBOARD_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Admin - LED Digital</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px 0;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
-
-        header h1 {
-            font-size: 2.5em;
-            font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 15px;
-        }
-
-        .nav-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .logout-btn {
-            background: rgba(255, 82, 82, 0.3);
-            border: 2px solid #ff5252;
-        }
-
-        main {
-            padding: 40px 0;
-        }
-
-        .admin-section {
-            background: white;
-            margin: 20px 0;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-
-        .admin-section h2 {
-            color: #667eea;
-            margin-bottom: 30px;
-            font-size: 1.8em;
-            text-align: center;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .stat-card {
-            background: #f8f9ff;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            border: 2px solid #667eea;
-        }
-
-        .stat-number {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-label {
-            color: #666;
-            margin-top: 10px;
-        }
-
-        .admin-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .action-card {
-            background: #f8f9ff;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-        .action-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .action-card h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px 5px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
-        .btn.secondary {
-            background: linear-gradient(45deg, #11998e, #38ef7d);
-        }
-
-        .btn.danger {
-            background: linear-gradient(45deg, #fd746c, #ff9068);
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <h1>👨‍💼 Panel de Administrador</h1>
-                <div class="nav-buttons">
-                    <a href="/" class="nav-btn">🏠 Inicio</a>
-                    <a href="/admin/logout" class="nav-btn logout-btn">🚪 Cerrar Sesión</a>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <main class="container">
-        <section class="admin-section">
-            <h2>📊 Estadísticas del Sistema</h2>
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number">1</div>
-                    <div class="stat-label">Visitas Hoy</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">250+</div>
-                    <div class="stat-label">Productos Activos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">1,200+</div>
-                    <div class="stat-label">Usuarios Registrados</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">99%</div>
-                    <div class="stat-label">Satisfacción</div>
-                </div>
-            </div>
-        </section>
-
-        <section class="admin-section">
-            <h2>🛠️ Herramientas de Administración</h2>
-            <div class="admin-actions">
-                <div class="action-card">
-                    <h3>📦 Gestión de Productos</h3>
-                    <p>Administrar el catálogo de productos</p>
-                    <button class="btn" onclick="alert('Función en desarrollo')">Gestionar</button>
-                </div>
-                <div class="action-card">
-                    <h3>👥 Usuarios</h3>
-                    <p>Ver y administrar usuarios registrados</p>
-                    <button class="btn secondary" onclick="alert('Función en desarrollo')">Ver Usuarios</button>
-                </div>
-                <div class="action-card">
-                    <h3>📈 Reportes</h3>
-                    <p>Generar reportes de ventas y estadísticas</p>
-                    <button class="btn" onclick="alert('Función en desarrollo')">Generar</button>
-                </div>
-                <div class="action-card">
-                    <h3>⚙️ Configuración</h3>
-                    <p>Ajustes del sistema y configuración</p>
-                    <button class="btn danger" onclick="alert('Función en desarrollo')">Configurar</button>
-                </div>
-            </div>
-        </section>
-    </main>
-</body>
-</html>
-"""
-
-# Mock products data
-PRODUCTS = [
-    {"id": 1, "name": "Tableros electronicos P10", "price": 330000, "category": "led", "description": "Tableros De Un Solo Color"},
-    {"id": 2, "name": "Tableros electronicos RGB", "price": 480000, "category": "led", "description": "Tableros De Luz RGB"},
-    {"id": 3, "name": "Diseños Neos Personalizados", "price": 50000, "category": "neon", "description": "Personaliza Tu Logo En Neon"},
-    {"id": 4, "name": "Pantallas Para Imagenes Y Video", "price": 1500000, "category": "display", "description": "Programarble Desde el Celular"}
-]
+# --- Rutas Principales de la Aplicación ---
 
 @app.route('/')
 def home():
-    """Ruta principal del marketplace"""
-    return render_template_string(HTML_TEMPLATE,
-                                titulo='LED Digital Marketplace',
-                                mensaje='🚀 LED Digital')
+    """Página de inicio con productos destacados."""
+    products = load_products()
+    import random
+    featured_products = random.sample(products, min(len(products), 3))
+    
+    return render_template('home.html', products=featured_products)
+
+@app.route('/products')
+def products():
+    """Página del catálogo de productos con búsqueda y filtrado."""
+    products_list = load_products()
+    search_query = request.args.get('search', '').lower()
+    category_filter = request.args.get('category', '')
+    
+    if search_query:
+        products_list = [p for p in products_list if search_query in p['name'].lower() or search_query in p['description'].lower()]
+    
+    if category_filter:
+        products_list = [p for p in products_list if p.get('category', '') == category_filter]
+    
+    categories = sorted(list(set(p.get('category', 'Sin categoría') for p in load_products())))
+    
+    return render_template('products.html', products=products_list, categories=categories)
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    """Página de detalle de producto."""
+    products = load_products()
+    product = next((p for p in products if p['id'] == product_id), None)
+    
+    if not product:
+        flash('Producto no encontrado.', 'error')
+        return redirect(url_for('products'))
+    
+    return render_template('product_detail.html', product=product)
+
+@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
+@user_required
+def add_to_cart_route(product_id):
+    """Ruta para agregar un producto al carrito (maneja la lógica de stock y persistencia)."""
+    quantity = int(request.form.get('quantity', 1))
+    add_to_cart(product_id, quantity) 
+    return redirect(url_for('product_detail', product_id=product_id))
+
+@app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
+@user_required
+def remove_from_cart_route(product_id):
+    """Ruta para eliminar un producto del carrito (maneja la lógica de persistencia)."""
+    remove_from_cart(product_id) 
+    return redirect(url_for('cart'))
+
+@app.route('/update_cart/<int:product_id>', methods=['POST'])
+@user_required
+def update_cart_route(product_id):
+    """Ruta para actualizar la cantidad de un producto en el carrito (maneja la lógica de persistencia)."""
+    new_quantity = int(request.form.get('quantity', 1))
+    update_cart_quantity(product_id, new_quantity) 
+    return redirect(url_for('cart'))
+
+@app.route('/cart')
+@user_required
+def cart():
+    """Página del carrito de compras."""
+    cart_items = get_cart() 
+    total = get_cart_total()
+    
+    return render_template('cart.html', cart_items=cart_items, total=total)
+
+@app.route('/checkout', methods=['GET', 'POST']) 
+@user_required
+def checkout():
+    """
+    Página de checkout para revisar el pedido y seleccionar el método de pago.
+    También maneja la simulación del procesamiento de pago.
+    """
+    cart_items = get_cart()
+    total = get_cart_total()
+    username = session['user_username']
+
+    if not cart_items:
+        flash('Tu carrito está vacío. No puedes proceder al pago.', 'error')
+        return redirect(url_for('cart'))
+
+    # Cargar datos del usuario para obtener la dirección de entrega
+    users = load_users() # Ahora load_users() está importada de user_auth.py
+    user_data = users.get(username, {})
+    
+    # Obtener la dirección de entrega del usuario, o un valor por defecto
+    delivery_address = user_data.get('delivery_address', '').strip()
+
+    # Cargar métodos de pago del usuario actual
+    all_payment_methods = load_payment_methods() 
+    user_payment_methods = [
+        method for method in all_payment_methods if method['user_username'] == username
+    ]
+
+    if request.method == 'POST':
+        selected_method_id = request.form.get('payment_method')
+        # Obtener la dirección de entrega del formulario
+        provided_delivery_address = request.form.get('delivery_address_input', '').strip()
+
+        if not selected_method_id:
+            flash('Por favor, selecciona un método de pago.', 'error')
+            return redirect(url_for('checkout'))
+        
+        if not provided_delivery_address:
+            flash('Por favor, ingresa una dirección de entrega.', 'error')
+            return redirect(url_for('checkout'))
+
+        try:
+            products_in_db = load_products()
+            for item_id_str, item_details in cart_items.items():
+                item_id = int(item_id_str)
+                for p in products_in_db:
+                    if p['id'] == item_id:
+                        if p['stock'] >= item_details['quantity']: 
+                            p['stock'] -= item_details['quantity']
+                        else:
+                            flash(f'No hay suficiente stock para {item_details["name"]}. La compra no se pudo completar.', 'error')
+                            return redirect(url_for('checkout')) 
+                        break
+            with open(PRODUCTS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(products_in_db, f, indent=2, ensure_ascii=False)
+            
+            orders = load_orders()
+            new_order_id = 1
+            if orders:
+                new_order_id = max(o.get('id', 0) for o in orders) + 1 
+
+            order_items = []
+            for product_id_str, item_details in cart_items.items():
+                order_items.append({
+                    "product_id": int(product_id_str),
+                    "name": item_details['name'],
+                    "price": item_details['price'],
+                    "quantity": item_details['quantity'],
+                    "image_url": item_details.get('image_url', '') 
+                })
+
+            new_order = {
+                "id": new_order_id,
+                "user_username": username,
+                "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                "total": total,
+                "items": order_items,
+                "status": "Completado",
+                "delivery_address": provided_delivery_address # GUARDAR DIRECCIÓN EN EL PEDIDO
+            }
+            orders.append(new_order)
+            save_orders(orders)
+
+            clear_cart_session() 
+            clear_user_persistent_cart(username) 
+            
+            flash('¡Pago procesado con éxito! Tu pedido ha sido confirmado.', 'success')
+            add_notification(username, "compra", "¡Tu compra ha sido confirmada!", f"Gracias por tu compra por un total de ${total:.2f}. Tu pedido está en procesamiento y será enviado a: {provided_delivery_address}.")
+            
+            return redirect(url_for('home')) 
+        except Exception as e:
+            flash(f'Hubo un error al procesar tu pago: {e}. Por favor, inténtalo de nuevo.', 'error')
+            logger.error(f"Error al procesar el pago: {e}")
+            return redirect(url_for('checkout'))
+
+    return render_template('checkout.html', cart_items=cart_items, total=total, 
+                           payment_methods=user_payment_methods, 
+                           delivery_address=delivery_address) # Pasar la dirección a la plantilla
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-    """Página de login para administradores"""
+    """Página de inicio de sesión del administrador."""
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form['username']
+        password = request.form['password']
         
-        if username in ADMIN_CREDENTIALS and ADMIN_CREDENTIALS[username] == password:
+        admin_users = load_admin_users()
+        
+        if username in admin_users and check_password_hash(admin_users[username]['password'], password):
             session['admin_logged_in'] = True
             session['admin_username'] = username
+            flash('Inicio de sesión de administrador exitoso.', 'success')
             return redirect(url_for('admin_dashboard'))
         else:
-            return render_template_string(ADMIN_LOGIN_TEMPLATE, 
-                                        error='usuario o contraseña incorrectas')
+            flash('Credenciales de administrador incorrectas.', 'error')
     
-    return render_template_string(ADMIN_LOGIN_TEMPLATE)
+    return render_template('admin_login.html')
 
-@app.route('/admin')
+@app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    """Dashboard de administrador"""
-    return render_template_string(ADMIN_DASHBOARD_TEMPLATE)
+    """Panel de control del administrador."""
+    products = load_products()
+    
+    total_stock = sum(p.get('stock', 0) for p in products)
+    total_price = sum(p.get('price', 0) for p in products)
+    avg_price = total_price / len(products) if products else 0
+    low_stock_products = len([p for p in products if p.get('stock', 0) < 10])
+
+    stats = {
+        'total_products': len(products),
+        'total_stock': total_stock,
+        'avg_price': avg_price,
+        'low_stock_products': low_stock_products
+    }
+    
+    return render_template('admin_dashboard.html', stats=stats, products=products)
+
+@app.route('/admin/reports')
+@admin_required
+def admin_reports():
+    """Página para ver los reportes de los usuarios."""
+    reports = load_reports() 
+    sorted_reports = sorted(
+        reports,
+        key=lambda x: (0 if x['status'] == 'Abierto' else 1 if x['status'] == 'En Progreso' else 2, x['date']),
+        reverse=False 
+    )
+    return render_template('admin_reports.html', reports=sorted_reports)
+
+@app.route('/admin/reports/respond/<int:report_id>', methods=['POST'])
+@admin_required
+def admin_respond_report(report_id):
+    """
+    Maneja la respuesta y actualización del estado de un reporte.
+    Recibe los datos del modal en admin_reports.html via AJAX.
+    """
+    response_text = request.form.get('admin_response_text', '').strip()
+    new_status = request.form.get('report_status', '').strip()
+
+    reports = load_reports()
+    report_found = False
+    for report in reports:
+        if report['id'] == report_id:
+            report_found = True
+            report['admin_response'] = response_text
+            report['status'] = new_status
+            
+            add_notification(report.get('user', 'Usuario Desconocido'), "reporte_respuesta", f"Respuesta a tu reporte #{report_id} ({report.get('type', 'General')})", f"Tu reporte: \"{report.get('description', '')[:50]}...\" ha sido actualizado a '{new_status}'. Respuesta: \"{response_text[:100]}...\"")
+
+            if 'status_history' not in report:
+                report['status_history'] = []
+            report['status_history'].append({
+                'timestamp': datetime.now().isoformat(),
+                'status': new_status,
+                'response': response_text,
+                'admin': session.get('admin_username', 'Desconocido')
+            })
+            break
+    
+    if report_found and save_reports(reports):
+        flash('Reporte actualizado exitosamente.', 'success')
+        return jsonify(success=True, message='Reporte actualizado.')
+    else:
+        flash('Error al actualizar el reporte.', 'error')
+        return jsonify(success=False, message='Error al actualizar el reporte.'), 400
 
 @app.route('/admin/logout')
 def admin_logout():
-    """Cerrar sesión de administrador"""
+    """Cierra la sesión del administrador."""
     session.pop('admin_logged_in', None)
     session.pop('admin_username', None)
+    flash('Sesión de administrador cerrada.', 'success')
     return redirect(url_for('home'))
 
-@app.route('/api/test', methods=['GET', 'POST'])
-def api_test():
-    """API de prueba mejorada"""
-    if request.method == 'POST':
-        try:
-            data = request.get_json()
-            return jsonify({
-                'message': '✅ Datos recibidos correctamente',
-                'data': data,
-                'status': 'success',
-                'method': 'POST',
-                'timestamp': datetime.now().isoformat(),
-                'server': 'LED Digital API v1.0'
-            })
-        except Exception as e:
-            return jsonify({
-                'message': '❌ Error al procesar datos',
-                'error': str(e),
-                'status': 'error',
-                'timestamp': datetime.now().isoformat()
-            }), 400
-    
-    return jsonify({
-        'message': '🟢 API funcionando correctamente',
-        'status': 'success',
-        'method': 'GET',
-        'timestamp': datetime.now().isoformat(),
-        'version': '1.0.0',
-        'endpoints': ['/api/test', '/api/products', '/status']
-    })
-
-@app.route('/api/products', methods=['GET'])
-def get_products():
-    """Endpoint para obtener productos del marketplace"""
-    try:
-        return jsonify({
-            'message': '🛍️ Productos obtenidos exitosamente',
-            'status': 'success',
-            'data': PRODUCTS,
-            'total': len(PRODUCTS),
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        return jsonify({
-            'message': '❌ Error al obtener productos',
-            'error': str(e),
-            'status': 'error'
-        }), 500
-
-@app.route('/api/products/<int:product_id>', methods=['GET'])
-def get_product(product_id):
-    """Obtener un producto específico"""
-    product = next((p for p in PRODUCTS if p['id'] == product_id), None)
-    if product:
-        return jsonify({
-            'message': '✅ Producto encontrado',
-            'status': 'success',
-            'data': product,
-            'timestamp': datetime.now().isoformat()
-        })
-    else:
-        return jsonify({
-            'message': '❌ Producto no encontrado',
-            'status': 'error',
-            'product_id': product_id
-        }), 404
-
-@app.route('/api/admin/stats')
-@admin_required
-def admin_stats():
-    """API de estadísticas solo para administradores"""
-    return jsonify({
-        'message': '📊 Estadísticas del sistema',
-        'status': 'success',
-        'data': {
-            'visits_today': 1,
-            'active_products': 250,
-            'registered_users': 1200,
-            'satisfaction_rate': 98,
-            'total_sales': 150,
-            'revenue_month': 2500000,
-            'last_updated': datetime.now().isoformat()
-        },
-        'admin_user': session.get('admin_username'),
-        'timestamp': datetime.now().isoformat()
-    })
-
-@app.route('/status')
-def status():
-    """Estado completo del sistema"""
-    import sys
-    import platform
-    
-    return jsonify({
-        'status': '🟢 ONLINE',
-        'message': 'LED Digital Marketplace funcionando correctamente',
-        'system_info': {
-            'platform': platform.system(),
-            'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-            'flask_version': '2.x',
-            'directory': os.getcwd(),
-            'timestamp': datetime.now().isoformat()
-        },
-        'api_endpoints': {
-            'main': '/',
-            'products': '/api/products',
-            'test': '/api/test',
-            'status': '/status',
-            'admin': '/admin'
-        },
-        'features': [
-            'Marketplace UI',
-            'Product Catalog',
-            'REST API',
-            'Admin Panel',
-            'Authentication System',
-            'Responsive Design'
-        ]
-    })
-
 @app.errorhandler(404)
-def not_found(error):
-    """Manejo de errores 404"""
-    return jsonify({
-        'message': '❌ Endpoint no encontrado',
-        'status': 'error',
-        'code': 404,
-        'available_endpoints': [
-            '/',
-            '/api/test',
-            '/api/products',
-            '/status',
-            '/admin'
-        ]
-    }), 404
+def not_found_error(error):
+    """Maneja errores 404 (Página no encontrada)."""
+    return render_template('error_404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Maneja errores 500 (Error interno del servidor)."""
+    logger.exception("Ha ocurrido un error 500:")
+    return render_template('error_500.html'), 500
+
+def init_app():
+    """Inicializa la aplicación Flask, incluyendo la configuración de usuarios y el registro de Blueprints."""
+    init_admin_users() 
+    load_products()    
+    load_reports()     
+    load_user_carts()  
+    load_orders()      
+    
+    app.register_blueprint(user_bp, url_prefix='/user')
+    app.register_blueprint(admin_products_bp, url_prefix='/admin')
+    logger.info("Blueprints de usuario y administrador registrados.")
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("🚀 LED DIGITAL MARKETPLACE CON PANEL ADMIN")
-    print("=" * 60)
-    print("📱 Página principal: http://127.0.0.1:5000/")
-    print("🛍️ Productos API: http://127.0.0.1:5000/api/products") 
-    print("🔧 Test API: http://127.0.0.1:5000/api/test")
-    print("📊 Estado sistema: http://127.0.0.1:5000/status")
-    print("👨‍💼 Panel Admin: http://127.0.0.1:5000/admin")
-    print("=" * 60)
-    print("🔐 Credenciales de Admin:")
-    print("   • Usuario: admin | Contraseña: admin123")
-    print("   • Usuario: led_admin | Contraseña: led2025")
-    print("=" * 60)
-    print("✨ Características:")
-    print("   • Interfaz de marketplace moderna")
-    print("   • API REST completa")
-    print("   • Panel de administrador protegido")
-    print("   • Sistema de autenticación")
-    print("   • Estadísticas solo para admins")
-    print("   • Diseño responsive")
-    print("   • Manejo de errores")
-    print("=" * 60)
-    
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    init_app()
+    app.run(debug=True, host='0.0.0.0', port=5000)
+

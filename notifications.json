@@ -1,0 +1,75 @@
+[
+  {
+    "id": 1,
+    "user_username": "usuario1",
+    "type": "oferta",
+    "title": "¡Nueva oferta especial!",
+    "message": "Obtén un 20% de descuento en laptops gaming por tiempo limitado.",
+    "timestamp": "2024-06-15 10:00:00",
+    "read": false
+  },
+  {
+    "id": 2,
+    "user_username": "usuario1",
+    "type": "reporte_respuesta",
+    "report_id": 1,
+    "title": "Tu reporte ha sido respondido",
+    "message": "Hemos revisado tu reporte #1 (botón de carrito). Estamos trabajando en una solución.",
+    "timestamp": "2024-06-15 11:30:00",
+    "read": false
+  },
+  {
+    "id": 3,
+    "user_username": "usuario2",
+    "type": "actualizacion",
+    "title": "Actualización de la plataforma",
+    "message": "Hemos lanzado nuevas características y mejoras de rendimiento. ¡Descúbrelas!",
+    "timestamp": "2024-06-14 15:00:00",
+    "read": true
+  },
+  {
+    "id": 4,
+    "user_username": "usuario1",
+    "type": "compra",
+    "title": "Tu compra se ha completado",
+    "message": "¡Gracias por tu compra! Tu pedido #XYZ ha sido procesado y será enviado pronto.",
+    "timestamp": "2024-06-13 09:00:00",
+    "read": true
+  },
+  {
+    "id": 5,
+    "user_username": "usuario1",
+    "type": "compra",
+    "title": "¡Tu compra ha sido confirmada!",
+    "message": "Gracias por tu compra por un total de $100000.00. Tu pedido está en procesamiento.",
+    "timestamp": "2025-06-16 14:54:28",
+    "read": false
+  },
+  {
+    "id": 6,
+    "user_username": "usuario1",
+    "type": "compra",
+    "title": "¡Tu compra ha sido confirmada!",
+    "message": "Gracias por tu compra por un total de $50000.00. Tu pedido está en procesamiento.",
+    "timestamp": "2025-06-16 17:04:45",
+    "read": false
+  },
+  {
+    "id": 7,
+    "user_username": "usuario1",
+    "type": "compra",
+    "title": "¡Tu compra ha sido confirmada!",
+    "message": "Gracias por tu compra por un total de $480000.00. Tu pedido está en procesamiento.",
+    "timestamp": "2025-06-16 17:08:21",
+    "read": false
+  },
+  {
+    "id": 8,
+    "user_username": "usuario1",
+    "type": "compra",
+    "title": "¡Tu compra ha sido confirmada!",
+    "message": "Gracias por tu compra por un total de $960000.00. Tu pedido está en procesamiento y será enviado a: calle 43 #56-64 apt301.",
+    "timestamp": "2025-06-16 17:24:51",
+    "read": false
+  }
+]

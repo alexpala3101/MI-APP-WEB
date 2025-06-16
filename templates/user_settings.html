@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Configuración de Cuenta{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8 bg-white rounded-lg shadow-lg mt-8">
+    <div class="header text-center mb-8 bg-green-100 p-6 rounded-lg">
+        <h1 class="text-3xl font-bold text-green-800 mb-2">⚙️ Configuración de Cuenta</h1>
+        <p class="text-xl text-green-600">Gestiona tus preferencias y seguridad</p>
+    </div>
+    
+    {# Nuevo: Enlace para editar el perfil #}
+    <div class="settings-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+        <h3 class="text-xl font-semibold text-gray-800 mb-3 flex items-center"><i class="fas fa-user-edit mr-2"></i> Editar Perfil</h3>
+        <p class="text-gray-700 mb-4">Actualiza tu información personal, incluyendo tu email y dirección de entrega.</p>
+        <a href="{{ url_for('user_auth.user_edit_profile') }}" class="text-blue-600 hover:text-blue-800 font-medium underline transition">Ir a editar perfil</a>
+    </div>
+
+    <div class="settings-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+        <h3 class="text-xl font-semibold text-gray-800 mb-3 flex items-center"><i class="fas fa-key mr-2"></i> Cambiar Contraseña</h3>
+        <p class="text-gray-700 mb-4">Aquí podrás actualizar tu contraseña de forma segura para proteger tu cuenta.</p>
+        <a href="{{ url_for('user_auth.user_change_password') }}" class="text-blue-600 hover:text-blue-800 font-medium underline transition">Ir a cambiar contraseña</a>
+    </div>
+
+    <div class="settings-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-6">
+        <h3 class="text-xl font-semibold text-gray-800 mb-3 flex items-center"><i class="fas fa-bell mr-2"></i> Notificaciones</h3>
+        <p class="text-gray-700 mb-4">Controla qué tipo de notificaciones deseas recibir de nuestro marketplace, como actualizaciones de pedidos y ofertas.</p>
+        <a href="{{ url_for('user_auth.user_notifications') }}" class="text-blue-600 hover:text-blue-800 font-medium underline transition">Gestionar notificaciones</a>
+    </div>
+
+    <div class="settings-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8">
+        <h3 class="text-xl font-semibold text-gray-800 mb-3 flex items-center"><i class="fas fa-credit-card mr-2"></i> Métodos de Pago</h3>
+        <p class="text-gray-700 mb-4">Administra tus tarjetas de crédito y otras opciones de pago guardadas para un proceso de compra más rápido.</p>
+        <a href="{{ url_for('user_auth.user_payment_methods') }}" class="text-blue-600 hover:text-blue-800 font-medium underline transition">Configurar métodos de pago</a>
+    </div>
+
+    <div class="text-center">
+        <a href="{{ url_for('user_auth.user_dashboard') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition shadow-md">
+            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

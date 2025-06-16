@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Checkout - Marketplace{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8 text-gray-800 text-center">🛒 Proceder al Pago</h1>
+
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-800 flex items-center"><i class="fas fa-shopping-cart mr-3 text-blue-600"></i> Resumen de tu Pedido</h2>
+        <div class="divide-y divide-gray-200">
+            {% for product_id, item in cart_items.items() %}
+            <div class="py-3 flex items-center justify-between">
+                <div class="flex items-center">
+                    <img src="{{ item.image_url | default('https://placehold.co/60x60/e2e8f0/64748b?text=No+Img') }}" onerror="this.onerror=null;this.src='https://placehold.co/60x60/e2e8f0/64748b?text=No+Img';" alt="{{ item.name | default('Producto') }}" class="w-16 h-16 object-cover rounded-md mr-4">
+                    <div>
+                        <p class="font-medium text-gray-900">{{ item.name | default('Producto sin nombre') }}</p>
+                        <p class="text-sm text-gray-600">{{ item.quantity | default(0) }} x ${{ "%.2f"|format(item.price | default(0)) }}</p>
+                    </div>
+                </div>
+                <span class="font-semibold text-gray-900">${{ "%.2f"|format(item.price | default(0) * item.quantity | default(0)) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 pt-4 border-t-2 border-gray-200 flex justify-between items-center">
+            <span class="text-2xl font-bold text-gray-900">Total:</span>
+            <span class="text-3xl font-bold text-blue-600">${{ "%.2f"|format(total) }}</span>
+        </div>
+    </div>
+
+    <form action="{{ url_for('checkout') }}" method="POST">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800 flex items-center"><i class="fas fa-truck mr-3 text-orange-600"></i> Dirección de Entrega</h2>
+            <div class="mb-4">
+                <label for="delivery_address_input" class="block text-gray-700 text-sm font-bold mb-2">
+                    Ingresa tu Dirección de Entrega:
+                </label>
+                <textarea id="delivery_address_input" name="delivery_address_input" rows="3" required
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                          placeholder="Ej: Calle 123 #45-67, Apto 8B, Ciudad, País">{{ delivery_address | default('') }}</textarea>
+                <p class="text-xs text-gray-500 mt-1">Asegúrate de que esta sea la dirección correcta para tu envío.</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800 flex items-center"><i class="fas fa-wallet mr-3 text-purple-600"></i> Selecciona tu Método de Pago</h2>
+            
+            {% if payment_methods %}
+                <div class="space-y-4 mb-6">
+                    {% for method in payment_methods %}
+                    <label class="flex items-center bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition">
+                        <input type="radio" name="payment_method" value="{{ method.id }}" class="form-radio h-5 w-5 text-blue-600">
+                        <span class="ml-3 text-lg font-medium text-gray-700">
+                            {% if method.type == 'nequi' %}
+                                <i class="fas fa-mobile-alt text-pink-500 mr-2"></i>Nequi: {{ method.account_number | default('N/A') }}
+                            {% elif method.type == 'bancolombia' %}
+                                <i class="fas fa-bank text-yellow-600 mr-2"></i>Bancolombia: {{ method.account_number | default('N/A') }}
+                            {% else %}
+                                <i class="fas fa-credit-card text-gray-500 mr-2"></i>Otro: {{ method.account_number | default('N/A') }}
+                            {% endif %}
+                            <span class="text-sm text-gray-500 ml-2">(Titular: {{ method.account_holder | default('N/A') }})</span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-6 border border-dashed border-gray-300 rounded-lg mb-6">
+                    <p class="text-gray-600 mb-4">No tienes métodos de pago guardados.</p>
+                    <a href="{{ url_for('user_auth.user_add_payment_method') }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition shadow-sm font-medium">
+                        <i class="fas fa-plus-circle mr-2"></i>Añadir Método de Pago
+                    </a>
+                </div>
+            {% endif %}
+            
+            <div class="flex flex-col sm:flex-row justify-between gap-4 mt-6">
+                <a href="{{ url_for('cart') }}" class="flex-1 text-center bg-gray-300 text-gray-800 py-3 px-6 rounded-lg hover:bg-gray-400 transition font-semibold shadow-md">
+                    <i class="fas fa-arrow-left mr-2"></i> Volver al Carrito
+                </a>
+                <button type="submit" class="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md font-semibold">
+                    <i class="fas fa-check-circle mr-2"></i> Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

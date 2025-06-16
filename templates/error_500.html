@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Error del servidor - Marketplace{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-16 text-center bg-white rounded-lg shadow-md mt-12">
+    <i class="fas fa-server text-red-500 text-7xl mb-8 animate-pulse-slow"></i>
+    <h1 class="text-4xl font-bold text-gray-800 mb-4">500 - Error Interno del Servidor</h1>
+    <p class="text-xl text-gray-600 mb-8">Ha ocurrido un error inesperado en el servidor. Por favor, inténtalo de nuevo más tarde.</p>
+    <a href="{{ url_for('home') }}" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition shadow-lg font-semibold">
+        Volver al Inicio <i class="fas fa-home ml-2"></i>
+    </a>
+</div>
+{% endblock %}

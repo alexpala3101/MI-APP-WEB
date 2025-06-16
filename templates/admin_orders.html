@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Pedidos - Admin{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">📊 Gestión de Pedidos</h1>
+        <a href="{{ url_for('admin_dashboard') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
+            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard Admin
+        </a>
+    </div>
+
+    {% if orders %}
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full leading-normal">
+                <thead>
+                    <tr class="bg-gray-100 border-b border-gray-200">
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID Pedido</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Usuario</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dirección</th> {# NUEVO #}
+                        <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Artículos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr class="hover:bg-gray-50 border-b border-gray-200">
+                        <td class="px-5 py-5 text-sm text-gray-900">{{ order.id | default('N/A') }}</td>
+                        <td class="px-5 py-5 text-sm text-gray-900">{{ order.user_username | default('Anónimo') }}</td>
+                        <td class="px-5 py-5 text-sm text-gray-900">{{ order.timestamp | default('N/A') }}</td>
+                        <td class="px-5 py-5 text-sm text-gray-900 font-semibold">${{ "%.2f"|format(order.total | default(0)) }}</td>
+                        <td class="px-5 py-5 text-sm">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold 
+                                {% if order.status == 'Completado' %}bg-green-100 text-green-800
+                                {% elif order.status == 'En Progreso' %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ order.status | default('Desconocido') }}
+                            </span>
+                        </td>
+                        <td class="px-5 py-5 text-sm text-gray-900">
+                            {{ order.delivery_address | default('No especificada') }} {# NUEVO #}
+                        </td>
+                        <td class="px-5 py-5 text-sm text-gray-900">
+                            <ul class="list-disc pl-5 space-y-1">
+                                {% for item in order['items'] %}
+                                    <li class="flex items-center">
+                                        <img src="{{ item.image_url | default('https://placehold.co/30x30/e2e8f0/64748b?text=Img') }}" onerror="this.onerror=null;this.src='https://placehold.co/30x30/e2e8f0/64748b?text=Img';" alt="{{ item.name }}" class="w-8 h-8 object-cover rounded-sm mr-2">
+                                        {{ item.name | default('Producto') }} (x{{ item.quantity | default(0) }}) - ${{ "%.2f"|format(item.price | default(0)) }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-12 bg-white rounded-lg shadow-md">
+        <i class="fas fa-clipboard-list text-gray-400 text-6xl mb-4"></i>
+        <h2 class="text-2xl font-semibold text-gray-600 mb-4">No hay pedidos registrados.</h2>
+        <p class="text-gray-500">Los pedidos aparecerán aquí una vez que los usuarios realicen compras.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

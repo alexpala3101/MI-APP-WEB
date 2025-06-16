@@ -1,68 +1,348 @@
-/* static/css/style.css */
+/* ==========================================================================
+   ESTILOS CSS MEJORADOS PARA FLASK MARKETPLACE
+   ========================================================================== */
+
+/* Variables CSS para consistencia de colores y tamaños */
+:root {
+  /* Colores principales */
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --secondary-color: #64748b;
+  --accent-color: #06b6d4;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --info-color: #3b82f6;
+  
+  /* Colores de fondo */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-dark: #1e293b;
+  --bg-card: #ffffff;
+  
+  /* Colores de texto */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-light: #94a3b8;
+  --text-white: #ffffff;
+  
+  /* Sombras */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Espaciado */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* Bordes */
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+}
+
+/* Estilos generales y reseteo suave */
+html {
+  scroll-behavior: smooth;
+}
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f7f6;
-    color: #333;
-    line-height: 1.6;
+  font-family: 'Inter', sans-serif; /* Usar Inter si está disponible, sino una sans-serif genérica */
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  line-height: 1.6;
 }
 
-header {
-    background-color: #2c3e50;
-    color: white;
-    padding: 20px 0;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 2.5em;
+a:hover {
+  color: var(--primary-hover);
 }
 
-main {
-    padding: 20px;
-    max-width: 800px;
-    margin: 20px auto;
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    text-align: center; /* Centrar contenido dentro de main */
+/* Contenedores y secciones */
+.container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
 }
 
-p {
-    font-size: 1.1em;
-    margin-bottom: 20px;
+section {
+  padding-top: var(--spacing-xl);
+  padding-bottom: var(--spacing-xl);
 }
 
-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    font-size: 1.1em;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+/* Componentes de la UI */
+
+/* Botones */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  border: 1px solid transparent;
 }
 
-button:hover {
-    background-color: #2980b9;
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--text-white);
 }
 
-#messageArea {
-    margin-top: 20px;
-    font-weight: bold;
-    color: #27ae60;
+.btn-primary:hover {
+  background-color: var(--primary-hover);
 }
 
-footer {
-    text-align: center;
-    padding: 20px;
-    margin-top: 30px;
-    background-color: #ecf0f1;
-    color: #7f8c8d;
-    font-size: 0.9em;
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: var(--text-white);
+}
+
+.btn-secondary:hover {
+  background-color: #4b5563; /* Un tono más oscuro del secondary */
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-outline:hover {
+  background-color: var(--primary-color);
+  color: var(--text-white);
+}
+
+.btn-danger {
+  background-color: var(--error-color);
+  color: var(--text-white);
+}
+
+.btn-danger:hover {
+  background-color: #dc2626; /* Un tono más oscuro del error */
+}
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 0.875rem; /* text-sm */
+}
+
+/* Formularios */
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-secondary);
+}
+
+.form-input, .form-textarea, .form-select {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid #d1d5db; /* gray-300 */
+  border-radius: var(--border-radius-md);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* ring-blue-500/20 */
+  outline: none;
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Tarjetas */
+.card {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-lg);
+}
+
+.card-header {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 700;
+  margin-bottom: var(--spacing-md);
+  border-bottom: 1px solid #e5e7eb; /* gray-200 */
+  padding-bottom: var(--spacing-sm);
+}
+
+.card-body {
+  /* Estilos adicionales si son necesarios */
+}
+
+/* Mensajes Flash */
+.flash-message {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-md);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.flash-message.success {
+  background-color: #d1fae5; /* green-100 */
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.flash-message.error {
+  background-color: #fee2e2; /* red-100 */
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+}
+
+.flash-message.info {
+  background-color: #dbeafe; /* blue-100 */
+  color: var(--info-color);
+  border: 1px solid var(--info-color);
+}
+
+.flash-message .icon {
+  font-size: 1.25rem;
+}
+
+/* Tablas Responsivas */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Para un scroll más suave en iOS */
+  margin-bottom: var(--spacing-md);
+}
+
+.table-auto {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-auto th,
+.table-auto td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb; /* gray-200 */
+}
+
+.table-auto th {
+  background-color: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: 0.75rem; /* text-xs */
+}
+
+.table-auto tbody tr:hover {
+  background-color: #f3f4f6; /* gray-100 */
+}
+
+/* Componente de carga (Loading Spinner) */
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.loading.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--primary-color);
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* Efectos de enfoque mejorados */
+*:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Mejoras de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  .btn, a, .form-input, .form-textarea, .form-select, .flash-message, .table-auto tbody tr {
+    transition: none !important;
+  }
+}
+
+/* Media Queries para Responsividad */
+@media (max-width: 768px) {
+  .container {
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+  }
+
+  .card {
+    padding: var(--spacing-md);
+  }
+
+  .flash-message {
+    padding: var(--spacing-sm);
+  }
+
+  /* Ajustes para navegación si fuera necesario */
 }

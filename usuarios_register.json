@@ -1,0 +1,24 @@
+{
+  "texter@gmail.com": {
+    "name": "admin",
+    "email": "texter@gmail.com",
+    "phone": "+57 3052478605",
+    "password": "781a1cd881efae5281e555af8effc5b1a36d2e00ba1c95d8c730a362fafa1057d377d15fc34155a62d632c1a9bda1d276c8fa19bee76a334948559aba5d4c87b",
+    "created_at": "2025-06-14T14:17:26.975367",
+    "last_login": "2025-06-14T17:02:03.944069",
+    "login_count": 10,
+    "is_admin": false,
+    "active": true,
+    "email_verified": true,
+    "profile_complete": true,
+    "notifications": true,
+    "marketing": false,
+    "deleted": false
+  },
+  "usuario1": {
+    "username": "usuario1",
+    "password": "08d2d5d646f44f095ce03cb2fb63505643958304e4a440c1710e3e9a26f146dc:9f0ddd571d7660edbfc8bbefe689699d04ccaf13f25826c65a25734f8ec62cbd",
+    "email": "usuario1@gmail.com",
+    "registration_date": "2025-06-16 14:07:26"
+  }
+}

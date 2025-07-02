@@ -1,11 +1,12 @@
-# admin_users.py
+# admin_users.py - Admin User Management Blueprint
 from flask import Blueprint, render_template_string, redirect, url_for, flash, session
 import json
 import os
 from functools import wraps
 
-# Importa funciones de user_auth.py para manejar los datos de usuario
-from user_auth import load_users, save_users, USERS_FILE
+# --- IMPORTACIONES DESDE data_manager.py ---
+# Ahora importamos directamente desde data_manager.py
+from data_manager import load_users, save_users, USERS_FILE # USERS_FILE también debe venir de data_manager
 
 admin_users_bp = Blueprint('admin_users', __name__)
 
@@ -30,62 +31,80 @@ ADMIN_USERS_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <!-- Enlace a Tailwind CSS CDN -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <!-- Enlace a tu archivo CSS personalizado -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>{{ title }}</h1>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto p-8">
+        <div class="flex justify-between items-center bg-white shadow-md rounded-lg p-6 mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">{{ title }}</h1>
+            <a href="{{ url_for('admin_dashboard') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+                <i class="fas fa-tachometer-alt mr-2"></i>Ir al Dashboard
+            </a>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <ul class="flash-messages">
+                <div class="mb-6">
                     {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
+                        <div class="p-4 rounded-md {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ message }}
+                        </div>
                     {% endfor %}
-                </ul>
+                </div>
             {% endif %}
         {% endwith %}
 
-        <div class="table-container">
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre de Usuario</th>
-                        <th>Email</th>
-                        <th>Fecha de Registro</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.registration_date }}</td>
-                        <td>
-                            <form action="{{ url_for('admin_users.delete_user', username=user.username) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres eliminar a {{ user.username }}?');">
-                                <button type="submit" class="btn-delete">Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center">No hay usuarios registrados.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Lista de Usuarios</h2>
+            {% if users %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Usuario
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Fecha de Registro
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Acciones
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for user in users %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ user.username }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {{ user.email }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {{ user.registration_date }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <form action="{{ url_for('admin_users.delete_user', username=user.username) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres eliminar al usuario {{ user.username }}?');">
+                                    <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-gray-600 text-center py-4">No hay usuarios registrados.</p>
+            {% endif %}
         </div>
-
-        <div class="text-center mt-6">
-            <a href="{{ url_for('admin_dashboard') }}" class="inline-block bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+        
+        <div class="text-center mt-8">
+            <a href="{{ url_for('admin_dashboard') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-300">
                 Volver al Panel de Administrador
             </a>
         </div>
@@ -100,7 +119,7 @@ def manage_users():
     """
     Muestra una lista de todos los usuarios registrados en el sistema.
     """
-    users = load_users()
+    users = load_users() # Ahora se llama a la función de data_manager.py
     # Convierte el diccionario de usuarios a una lista para facilitar la iteración en la plantilla
     users_list = list(users.values())
     return render_template_string(ADMIN_USERS_TEMPLATE, title="Gestión de Usuarios", users=users_list)
@@ -111,20 +130,14 @@ def delete_user(username):
     """
     Gestiona la eliminación de un usuario por su nombre de usuario.
     """
-    users = load_users()
+    users = load_users() # Ahora se llama a la función de data_manager.py
     if username in users:
         del users[username]
-        if save_users(users):
-            flash(f'¡Usuario "{username}" eliminado exitosamente!', 'success')
+        if save_users(users): # Ahora se llama a la función de data_manager.py
+            flash(f'¡Usuario \"{username}\" eliminado exitosamente!', 'success')
         else:
-            flash(f'Error al eliminar el usuario "{username}".', 'error')
+            flash(f'Error al eliminar el usuario \"{username}\".', 'error')
     else:
-        flash(f'No se pudo eliminar el usuario "{username}" porque no fue encontrado.', 'error')
+        flash(f'No se pudo eliminar el usuario \"{username}\" porque no fue encontrado.', 'error')
 
     return redirect(url_for('admin_users.manage_users'))
-
-def create_admin_users_routes(app):
-    """
-    Registra el blueprint de gestión de usuarios de administrador en la aplicación Flask.
-    """
-    app.register_blueprint(admin_users_bp)

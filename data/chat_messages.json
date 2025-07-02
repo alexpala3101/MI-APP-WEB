@@ -1,0 +1,60 @@
+{
+  "_example": {
+    "user": "usuario1",
+    "messages": [
+      {
+        "from": "user",
+        "text": "Hola, quiero saber el precio.",
+        "timestamp": "2025-07-02 10:00:00"
+      },
+      {
+        "from": "admin",
+        "text": "Hola, el precio es $100.",
+        "timestamp": "2025-07-02 10:01:00"
+      }
+    ]
+  },
+  "usuario1": [
+    {
+      "from": "user",
+      "text": "compra texter\nTamaño solicitado: 1 m x 16 cm",
+      "timestamp": "2025-07-02 10:50:20",
+      "order_id": "a98899b8c9b90b67"
+    },
+    {
+      "from": "user",
+      "text": "texter\nTamaño solicitado: 60 cm x 50 cm",
+      "timestamp": "2025-07-02 11:13:49",
+      "image_url": "/static/uploads/usuario1_20250702111349_led_2.png",
+      "order_id": "8139bb284b09e072"
+    },
+    {
+      "from": "user",
+      "text": "ds",
+      "timestamp": "2025-07-02 11:27:38"
+    }
+  ],
+  "usuario2": [
+    {
+      "from": "user",
+      "text": "xd",
+      "timestamp": "2025-07-02 13:09:30"
+    },
+    {
+      "from": "admin",
+      "text": "xd",
+      "timestamp": "2025-07-02 13:09:44"
+    },
+    {
+      "from": "user",
+      "text": "prueba\nTamaño solicitado: 0.03 m x 0.03 m",
+      "timestamp": "2025-07-02 13:14:25",
+      "order_id": "9c3e139d7b9de7ac"
+    },
+    {
+      "from": "user",
+      "text": "😎",
+      "timestamp": "2025-07-02 13:15:53"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "order_id": "a98899b8c9b90b67",
+    "username": "usuario1",
+    "items": [
+      {
+        "product_id": "3",
+        "name": "Diseños Neos Personalizados",
+        "quantity": 3,
+        "price": 50000.0
+      },
+      {
+        "product_id": "2",
+        "name": "Tableros electronicos RGB",
+        "quantity": 1,
+        "price": 480000.0
+      },
+      {
+        "product_id": "4",
+        "name": "Pantallas Para Imagenes Y Video",
+        "quantity": 1,
+        "price": 1500000.0
+      },
+      {
+        "product_id": "1",
+        "name": "Tableros electronicos P10",
+        "quantity": 1,
+        "price": 330000.0
+      }
+    ],
+    "total_price": 2460000.0,
+    "payment_method_id": "contact_admin",
+    "delivery_address": "",
+    "order_date": "2025-07-02 10:50:20",
+    "status": "pending",
+    "admin_message": "compra texter"
+  },
+  {
+    "order_id": "8139bb284b09e072",
+    "username": "usuario1",
+    "items": [
+      {
+        "product_id": "3",
+        "name": "Diseños Neos Personalizados",
+        "quantity": 1,
+        "price": 50000.0
+      }
+    ],
+    "total_price": 50000.0,
+    "payment_method_id": "contact_admin",
+    "delivery_address": "",
+    "order_date": "2025-07-02 11:13:49",
+    "status": "pending",
+    "admin_message": "texter"
+  },
+  {
+    "order_id": "9c3e139d7b9de7ac",
+    "username": "usuario2",
+    "items": [
+      {
+        "product_id": "3",
+        "name": "Diseños Neos Personalizados",
+        "quantity": 1,
+        "price": 50000.0
+      }
+    ],
+    "total_price": 50000.0,
+    "payment_method_id": "contact_admin",
+    "delivery_address": "",
+    "order_date": "2025-07-02 13:14:25",
+    "status": "pending",
+    "admin_message": "prueba"
+  }
+]

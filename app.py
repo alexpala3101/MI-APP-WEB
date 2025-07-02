@@ -1,6 +1,7 @@
 # app.py - Main Flask Application with Enhanced Features
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import json
 import os
 from datetime import datetime, timedelta
@@ -9,454 +10,375 @@ from functools import wraps
 import logging
 import re
 
-# Importar tus módulos existentes (Blueprints)
-from user_auth import (
-    user_bp, user_required, add_notification, load_payment_methods, 
-    get_cart, add_to_cart, remove_from_cart, update_cart_quantity, 
-    clear_user_persistent_cart, load_user_carts, load_users # IMPORTAR load_users
-) 
-from admin_products import admin_products_bp, admin_required
+# --- Importar funciones de carga/guardado desde data_manager.py ---
+# ¡IMPORTANTE! Asegúrate de que tengas un archivo data_manager.py
+# en la misma carpeta, con todas las funciones de carga/guardado.
+from data_manager import (
+    load_products, save_products, load_orders, save_orders,
+    load_reports, save_reports, load_users, save_users,
+    load_notifications, save_notifications, load_payment_methods,
+    save_payment_methods, load_user_carts, save_user_carts,
+    # ADMIN_FILE eliminado porque no existe en data_manager.py
+    # Estas funciones se importan ahora DIRECTAMENTE desde data_manager.py
+    add_notification, get_cart, add_to_cart, remove_from_cart, update_cart_quantity,
+    clear_user_persistent_cart
+)
+from data_manager_chat import add_chat_message, get_user_chat, get_all_user_chats
 
-# Configurar el logging para ver mensajes informativos y errores
-logging.basicConfig(level=logging.INFO)
+# --- Importar tus módulos existentes (Blueprints) ---
+# Aquí, solo importas el Blueprint de user_auth, no sus funciones internas
+from user_auth import user_bp, login_required
+from admin_products import admin_products_bp
+from admin_users import admin_users_bp
+
+# Configuración básica del logger
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Inicializar la aplicación Flask
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+# Generar una clave secreta fuerte para las sesiones
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
-# Configuración de archivos de datos
-ADMIN_FILE = 'admin_users.json'
-PRODUCTS_FILE = 'products.json'
-REPORTS_FILE = 'reports.json' 
-ORDERS_FILE = 'user_orders.json' 
-CART_SESSION_KEY = 'cart' 
+# Configuración para hacer las sesiones permanentes (recordar al usuario)
+# NOTA: 30 minutos es un tiempo relativamente corto para una sesión "permanente".
+# Considera aumentar esto (ej. a días o semanas) si el usuario espera más persistencia.
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7) # Cambiado a 7 días como ejemplo
 
-app.permanent_session_lifetime = timedelta(days=31)
+# Configuración para carga de imágenes
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Registrar Blueprints
+app.register_blueprint(user_bp)
+app.register_blueprint(admin_products_bp)
+app.register_blueprint(admin_users_bp)
+
+
+# --- Funciones de utilidad ---
 
 def init_admin_users():
-    """Inicializa el archivo de usuarios administradores con un administrador por defecto si no existe."""
-    if not os.path.exists(ADMIN_FILE):
-        default_admin = {
-            'admin': {
-                'username': 'admin',
-                'password': generate_password_hash('admin123'), 
-                'email': 'admin@marketplace.com',
-                'role': 'admin',
-                'created_at': datetime.now().isoformat()
-            }
-        }
-        try:
-            with open(ADMIN_FILE, 'w', encoding='utf-8') as f:
-                json.dump(default_admin, f, indent=2, ensure_ascii=False)
-            logger.info("Archivo de usuarios administradores inicializado con admin por defecto.")
-        except Exception as e:
-            logger.error(f"Error al inicializar el archivo de usuarios administradores: {e}")
+    """Inicializa o actualiza el usuario administrador con la contraseña por defecto."""
+    users = load_users()
+    # Siempre actualiza la contraseña del admin
+    ADMIN_PASSWORD_HASH = generate_password_hash("ADMIN1234@")
+    users['admin'] = {
+        'username': 'admin',
+        'email': 'admin@marketplace.com',
+        'password': ADMIN_PASSWORD_HASH,
+        'role': 'admin',
+        'registration_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'last_login': None,
+        'is_active': True
+    }
+    save_users(users)
+    logger.info("Usuario administrador 'admin' creado o actualizado con contraseña por defecto.")
 
-def load_admin_users():
-    """Carga los usuarios administradores desde el archivo JSON."""
-    try:
-        with open(ADMIN_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        init_admin_users()
-        return load_admin_users()
-    except Exception as e:
-        logger.error(f"Error al cargar usuarios administradores: {e}")
-        return {}
+# Decorador para requerir autenticación de administrador
+# (Este decorador puede estar en admin_users.py o aquí si es global)
+# Asegúrate de que solo los usuarios con 'role': 'admin' puedan acceder
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            flash('Acceso denegado. Se requiere iniciar sesión como administrador.', 'error')
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-def load_products():
-    """Carga los productos desde el archivo JSON. Si no existe, crea algunos productos de ejemplo."""
-    if not os.path.exists(PRODUCTS_FILE):
-        sample_products = [
-            {
-                "id": 1,
-                "name": "Laptop Gaming",
-                "description": "Potente laptop para gaming con GPU dedicada y pantalla de 144Hz.",
-                "price": 1299.99,
-                "stock": 15,
-                "image_url": "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=400&h=300&fit=crop",
-                "category": "Electrónicos"
-            },
-            {
-                "id": 2,
-                "name": "Smartphone Pro",
-                "description": "Teléfono inteligente de última generación con cámara profesional y batería de larga duración.",
-                "price": 899.99,
-                "stock": 25,
-                "image_url": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=300&fit=crop",
-                "category": "Electrónicos"
-            },
-            {
-                "id": 3,
-                "name": "Auriculares Bluetooth",
-                "description": "Auriculares inalámbricos con cancelación de ruido activa y sonido de alta fidelidad.",
-                "price": 199.99,
-                "stock": 50,
-                "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop",
-                "category": "Audio"
-            },
-            {
-                "id": 4,
-                "name": "Smartwatch Deportivo",
-                "description": "Reloj inteligente con monitor de frecuencia cardíaca, GPS y seguimiento de actividad.",
-                "price": 249.00,
-                "stock": 30,
-                "image_url": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&h=300&fit=crop",
-                "category": "Wearables"
-            },
-            {
-                "id": 5,
-                "name": "Tableta Gráfica",
-                "description": "Tableta profesional para diseño gráfico y dibujo digital, con alta precisión.",
-                "price": 349.50,
-                "stock": 10,
-                "image_url": "https://images.unsplash.com/photo-1588019777085-f55a109a25b2?w=400&h=300&fit=crop",
-                "category": "Creatividad"
-            }
-        ]
-        try:
-            with open(PRODUCTS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(sample_products, f, indent=2, ensure_ascii=False)
-            logger.info("Archivo de productos inicializado con productos de ejemplo.")
-            return sample_products
-        except Exception as e:
-            logger.error(f"Error al guardar productos de ejemplo: {e}")
-            return []
-    try:
-        with open(PRODUCTS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        logger.error(f"Error al cargar productos desde el archivo: {e}")
-        return []
-
-def load_reports():
-    """Carga los reportes desde el archivo JSON. Si no existe, crea algunos reportes de ejemplo."""
-    if not os.path.exists(REPORTS_FILE):
-        sample_reports = [
-            {"id": 1, "type": "Bug", "user": "usuario1", "date": "2024-05-10", "status": "Abierto", "description": "El botón de agregar al carrito no funciona en la página de productos.", "admin_response": ""},
-            {"id": 2, "type": "Sugerencia", "user": "usuario2", "date": "2024-05-08", "status": "Cerrado", "description": "Me gustaría ver más opciones de filtrado en la sección de productos.", "admin_response": "Gracias por tu sugerencia. Hemos tomado nota para futuras actualizaciones."},
-            {"id": 3, "type": "Problema de Pago", "user": "usuario3", "date": "2024-05-05", "status": "En Progreso", "description": "Mi pago fue rechazado pero el dinero se descontó de mi cuenta.", "admin_response": "Estamos investigando tu problema de pago y te contactaremos pronto con una solución."},
-            {"id": 4, "type": "Consulta", "user": "usuario1", "date": "2024-05-03", "status": "Abierto", "description": "¿Hay una forma de guardar productos en una lista de deseos?", "admin_response": ""},
-        ]
-        try:
-            with open(REPORTS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(sample_reports, f, indent=2, ensure_ascii=False)
-            logger.info("Archivo de reportes inicializado con reportes de ejemplo.")
-            return sample_reports
-        except Exception as e:
-            logger.error(f"Error al guardar reportes de ejemplo: {e}")
-            return []
-    try:
-        with open(REPORTS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        logger.error(f"Error al cargar reportes desde el archivo: {e}")
-        return []
-
-def save_reports(reports):
-    """Guarda los reportes en el archivo JSON."""
-    try:
-        with open(REPORTS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(reports, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        logger.error(f"Error al guardar reportes: {e}")
-        return False
-
-def load_orders():
-    """Carga los pedidos desde el archivo JSON. Si no existe, crea un archivo vacío."""
-    if not os.path.exists(ORDERS_FILE):
-        with open(ORDERS_FILE, 'w', encoding='utf-8') as f:
-            json.dump([], f, indent=2, ensure_ascii=False)
-        return []
-    try:
-        with open(ORDERS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        logger.error(f"Error al cargar pedidos: {e}")
-        return []
-
-def save_orders(orders):
-    """Guarda los pedidos en el archivo JSON."""
-    try:
-        with open(ORDERS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(orders, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        logger.error(f"Error al guardar pedidos: {e}")
-        return False
-
-def get_cart_total():
-    """Calcula el valor total del carrito."""
-    cart = get_cart() 
-    return sum(item['price'] * item['quantity'] for item in cart.values())
-
-def clear_cart_session():
-    """Limpia el carrito de compras de la sesión (usado internamente por Flask)."""
-    if CART_SESSION_KEY in session:
-        session.pop(CART_SESSION_KEY)
-        session.permanent = True 
+def allowed_file(filename):
+    """Verifica si el archivo tiene una extensión permitida."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# --- Rutas Principales de la Aplicación ---
+# --- Rutas principales ---
 
 @app.route('/')
 def home():
-    """Página de inicio con productos destacados."""
-    products = load_products()
-    import random
-    featured_products = random.sample(products, min(len(products), 3))
+    """Página de inicio que muestra los productos disponibles."""
+    products_dict = load_products()
+    products = list(products_dict.values())  # Convertir a lista para la plantilla
+    return render_template('index.html', products=products)
+
+@app.route('/cart')
+@login_required # Asegúrate de que el usuario esté logueado para ver el carrito
+def cart():
+    """Muestra el contenido del carrito de compras del usuario."""
+    # user_cart es el carrito persistente del usuario (si está logueado)
+    user_cart = get_cart(session.get('user_username'))
     
-    return render_template('home.html', products=featured_products)
+    products = load_products() # Para obtener detalles de los productos en el carrito
+    
+    cart_items_details = []
+    total_price = 0
+    
+    if user_cart:
+        for product_id, quantity in user_cart.items():
+            product = products.get(product_id)
+            if product:
+                item_total = product['price'] * quantity
+                total_price += item_total
+                cart_items_details.append({
+                    'id': product_id,
+                    'name': product['name'],
+                    'price': product['price'],
+                    'quantity': quantity,
+                    'image': product.get('image', '/static/images/default_product.png'), # Imagen por defecto
+                    'total': item_total
+                })
+            else:
+                flash(f'Producto con ID {product_id} no encontrado.', 'warning')
+    
+    return render_template('cart.html', cart_items=cart_items_details, total_price=total_price)
+
+
+@app.route('/add_to_cart/<product_id>', methods=['POST'])
+@login_required
+def add_to_cart_route(product_id):
+    """Añade un producto al carrito del usuario."""
+    quantity = int(request.form.get('quantity', 1))
+    username = session.get('user_username')
+    
+    if add_to_cart(product_id, quantity, username):
+        flash(f'Producto añadido al carrito. Cantidad: {quantity}', 'success')
+    else:
+        flash('Error al añadir producto al carrito o producto no encontrado.', 'error')
+    
+    return redirect(url_for('cart'))
+
+@app.route('/remove_from_cart/<product_id>', methods=['POST'])
+@login_required
+def remove_from_cart_route(product_id):
+    """Elimina un producto del carrito del usuario."""
+    username = session.get('user_username')
+    
+    if remove_from_cart(username, product_id):
+        flash('Producto eliminado del carrito.', 'success')
+    else:
+        flash('Error al eliminar producto del carrito.', 'error')
+    
+    return redirect(url_for('cart'))
+
+@app.route('/update_cart_quantity/<product_id>', methods=['POST'])
+@login_required
+def update_cart_quantity_route(product_id):
+    """Actualiza la cantidad de un producto en el carrito del usuario."""
+    new_quantity = int(request.form.get('quantity'))
+    username = session.get('user_username')
+
+    if new_quantity <= 0:
+        return redirect(url_for('remove_from_cart_route', product_id=product_id, _method='POST'))
+
+    if update_cart_quantity(username, product_id, new_quantity):
+        flash('Cantidad del producto actualizada.', 'success')
+    else:
+        flash('Error al actualizar la cantidad del producto.', 'error')
+
+    return redirect(url_for('cart'))
+
+
+@app.route('/checkout', methods=['GET', 'POST'])
+@login_required
+def checkout():
+    """Procesa el pago y crea una orden."""
+    username = session.get('user_username')
+    user_cart = get_cart(username)
+    
+    if not user_cart:
+        flash('Tu carrito está vacío.', 'error')
+        return redirect(url_for('cart'))
+
+    products = load_products()
+    orders = load_orders()
+    users = load_users()
+    current_user = users.get(username)
+
+    cart_items_details = []
+    total_price = 0
+
+    for product_id, quantity in user_cart.items():
+        product = products.get(product_id)
+        if product and product['stock'] >= quantity: # Verificar stock antes de checkout
+            item_total = product['price'] * quantity
+            total_price += item_total
+            cart_items_details.append({
+                'id': product_id,
+                'name': product['name'],
+                'price': product['price'],
+                'quantity': quantity,
+                'image': product.get('image', '/static/images/default_product.png'),
+                'total': item_total
+            })
+        else:
+            flash(f'Stock insuficiente para {product.get("name", "un producto")}. Por favor, ajusta tu carrito.', 'error')
+            return redirect(url_for('cart'))
+
+    if request.method == 'POST':
+        payment_method_id = request.form.get('payment_method')
+        delivery_address = request.form.get('delivery_address')
+
+        if not payment_method_id or not delivery_address:
+            flash('Por favor, selecciona un método de pago y proporciona una dirección de entrega.', 'error')
+            return render_template('checkout.html', cart_items=cart_items_details, total_price=total_price, payment_methods=current_user.get('payment_methods', []), user_address=current_user.get('delivery_address', ''))
+
+        # Proceso de pago simulado
+        # Aquí se integraría con una pasarela de pago real
+        payment_successful = True # Simulación de pago exitoso
+
+        if payment_successful:
+            order_id = secrets.token_hex(8)
+            new_order = {
+                'order_id': order_id,
+                'username': username,
+                'items': [{
+                    'product_id': item['id'],
+                    'name': item['name'],
+                    'quantity': item['quantity'],
+                    'price': item['price']
+                } for item in cart_items_details],
+                'total_price': total_price,
+                'payment_method_id': payment_method_id,
+                'delivery_address': delivery_address,
+                'order_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'status': 'pending' # O 'completed' si el pago es instantáneo
+            }
+            orders[order_id] = new_order
+            save_orders(orders)
+
+            # --- Registrar la compra en user_purchases.json ---
+            user_purchases = load_user_purchases()
+            user_purchases.append({
+                'order_id': order_id,
+                'username': username,
+                'items': new_order['items'],
+                'total_price': total_price,
+                'payment_method_id': payment_method_id,
+                'delivery_address': delivery_address,
+                'order_date': new_order['order_date'],
+                'status': new_order['status']
+            })
+            save_user_purchases(user_purchases)
+            # --- Fin registro compra ---
+
+            # Actualizar stock de productos
+            for item in cart_items_details:
+                product_id = item['id']
+                quantity_bought = item['quantity']
+                products[product_id]['stock'] -= quantity_bought
+            save_products(products) # Guardar los productos con el stock actualizado
+
+            # Limpiar el carrito del usuario después de la compra
+            clear_user_persistent_cart(username)
+
+            flash('¡Tu pedido ha sido realizado con éxito!', 'success')
+            add_notification(username, f'Tu pedido #{order_id} ha sido confirmado. Total: ${total_price:.2f}', 'order_confirmation')
+            return redirect(url_for('user_auth.user_orders'))
+        else:
+            flash('Error en el procesamiento del pago. Por favor, inténtalo de nuevo.', 'error')
+
+    # Si es GET, o POST con error, renderiza la página de checkout
+    user_payment_methods = current_user.get('payment_methods', []) if current_user else []
+    user_address = current_user.get('delivery_address', '') if current_user else ''
+
+    return render_template('checkout.html', 
+                           cart_items=cart_items_details, 
+                           total_price=total_price,
+                           payment_methods=user_payment_methods,
+                           user_address=user_address)
 
 @app.route('/products')
 def products():
     """Página del catálogo de productos con búsqueda y filtrado."""
-    products_list = load_products()
-    search_query = request.args.get('search', '').lower()
-    category_filter = request.args.get('category', '')
-    
-    if search_query:
-        products_list = [p for p in products_list if search_query in p['name'].lower() or search_query in p['description'].lower()]
-    
-    if category_filter:
-        products_list = [p for p in products_list if p.get('category', '') == category_filter]
-    
-    categories = sorted(list(set(p.get('category', 'Sin categoría') for p in load_products())))
-    
-    return render_template('products.html', products=products_list, categories=categories)
+    products_dict = load_products()
+    # Convertir a lista para iterar en la plantilla
+    products = list(products_dict.values())
+    # Obtener categorías únicas
+    categories = sorted(set(p.get('category', 'Sin categoría') for p in products))
+    # Filtros
+    search = request.args.get('search', '').lower()
+    category = request.args.get('category', '')
+    if search:
+        products = [p for p in products if search in p.get('name', '').lower() or search in p.get('description', '').lower()]
+    if category:
+        products = [p for p in products if p.get('category', 'Sin categoría') == category]
+    return render_template('products.html', products=products, categories=categories)
 
 @app.route('/product/<int:product_id>')
 def product_detail(product_id):
-    """Página de detalle de producto."""
     products = load_products()
-    product = next((p for p in products if p['id'] == product_id), None)
-    
+    product = products.get(str(product_id))
     if not product:
-        flash('Producto no encontrado.', 'error')
-        return redirect(url_for('products'))
-    
+        return render_template('error_404.html'), 404
     return render_template('product_detail.html', product=product)
 
-@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
-@user_required
-def add_to_cart_route(product_id):
-    """Ruta para agregar un producto al carrito (maneja la lógica de stock y persistencia)."""
-    quantity = int(request.form.get('quantity', 1))
-    add_to_cart(product_id, quantity) 
-    return redirect(url_for('product_detail', product_id=product_id))
 
-@app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
-@user_required
-def remove_from_cart_route(product_id):
-    """Ruta para eliminar un producto del carrito (maneja la lógica de persistencia)."""
-    remove_from_cart(product_id) 
-    return redirect(url_for('cart'))
+# --- Rutas de administración ---
 
-@app.route('/update_cart/<int:product_id>', methods=['POST'])
-@user_required
-def update_cart_route(product_id):
-    """Ruta para actualizar la cantidad de un producto en el carrito (maneja la lógica de persistencia)."""
-    new_quantity = int(request.form.get('quantity', 1))
-    update_cart_quantity(product_id, new_quantity) 
-    return redirect(url_for('cart'))
-
-@app.route('/cart')
-@user_required
-def cart():
-    """Página del carrito de compras."""
-    cart_items = get_cart() 
-    total = get_cart_total()
-    
-    return render_template('cart.html', cart_items=cart_items, total=total)
-
-@app.route('/checkout', methods=['GET', 'POST']) 
-@user_required
-def checkout():
-    """
-    Página de checkout para revisar el pedido y seleccionar el método de pago.
-    También maneja la simulación del procesamiento de pago.
-    """
-    cart_items = get_cart()
-    total = get_cart_total()
-    username = session['user_username']
-
-    if not cart_items:
-        flash('Tu carrito está vacío. No puedes proceder al pago.', 'error')
-        return redirect(url_for('cart'))
-
-    # Cargar datos del usuario para obtener la dirección de entrega
-    users = load_users() # Ahora load_users() está importada de user_auth.py
-    user_data = users.get(username, {})
-    
-    # Obtener la dirección de entrega del usuario, o un valor por defecto
-    delivery_address = user_data.get('delivery_address', '').strip()
-
-    # Cargar métodos de pago del usuario actual
-    all_payment_methods = load_payment_methods() 
-    user_payment_methods = [
-        method for method in all_payment_methods if method['user_username'] == username
-    ]
-
-    if request.method == 'POST':
-        selected_method_id = request.form.get('payment_method')
-        # Obtener la dirección de entrega del formulario
-        provided_delivery_address = request.form.get('delivery_address_input', '').strip()
-
-        if not selected_method_id:
-            flash('Por favor, selecciona un método de pago.', 'error')
-            return redirect(url_for('checkout'))
-        
-        if not provided_delivery_address:
-            flash('Por favor, ingresa una dirección de entrega.', 'error')
-            return redirect(url_for('checkout'))
-
-        try:
-            products_in_db = load_products()
-            for item_id_str, item_details in cart_items.items():
-                item_id = int(item_id_str)
-                for p in products_in_db:
-                    if p['id'] == item_id:
-                        if p['stock'] >= item_details['quantity']: 
-                            p['stock'] -= item_details['quantity']
-                        else:
-                            flash(f'No hay suficiente stock para {item_details["name"]}. La compra no se pudo completar.', 'error')
-                            return redirect(url_for('checkout')) 
-                        break
-            with open(PRODUCTS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(products_in_db, f, indent=2, ensure_ascii=False)
-            
-            orders = load_orders()
-            new_order_id = 1
-            if orders:
-                new_order_id = max(o.get('id', 0) for o in orders) + 1 
-
-            order_items = []
-            for product_id_str, item_details in cart_items.items():
-                order_items.append({
-                    "product_id": int(product_id_str),
-                    "name": item_details['name'],
-                    "price": item_details['price'],
-                    "quantity": item_details['quantity'],
-                    "image_url": item_details.get('image_url', '') 
-                })
-
-            new_order = {
-                "id": new_order_id,
-                "user_username": username,
-                "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                "total": total,
-                "items": order_items,
-                "status": "Completado",
-                "delivery_address": provided_delivery_address # GUARDAR DIRECCIÓN EN EL PEDIDO
-            }
-            orders.append(new_order)
-            save_orders(orders)
-
-            clear_cart_session() 
-            clear_user_persistent_cart(username) 
-            
-            flash('¡Pago procesado con éxito! Tu pedido ha sido confirmado.', 'success')
-            add_notification(username, "compra", "¡Tu compra ha sido confirmada!", f"Gracias por tu compra por un total de ${total:.2f}. Tu pedido está en procesamiento y será enviado a: {provided_delivery_address}.")
-            
-            return redirect(url_for('home')) 
-        except Exception as e:
-            flash(f'Hubo un error al procesar tu pago: {e}. Por favor, inténtalo de nuevo.', 'error')
-            logger.error(f"Error al procesar el pago: {e}")
-            return redirect(url_for('checkout'))
-
-    return render_template('checkout.html', cart_items=cart_items, total=total, 
-                           payment_methods=user_payment_methods, 
-                           delivery_address=delivery_address) # Pasar la dirección a la plantilla
-
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    """Página de inicio de sesión del administrador."""
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        admin_users = load_admin_users()
-        
-        if username in admin_users and check_password_hash(admin_users[username]['password'], password):
-            session['admin_logged_in'] = True
-            session['admin_username'] = username
-            flash('Inicio de sesión de administrador exitoso.', 'success')
-            return redirect(url_for('admin_dashboard'))
-        else:
-            flash('Credenciales de administrador incorrectas.', 'error')
-    
-    return render_template('admin_login.html')
-
-@app.route('/admin/dashboard')
+@app.route('/admin')
 @admin_required
 def admin_dashboard():
-    """Panel de control del administrador."""
+    """Página principal del panel de administración."""
+    users = load_users()
     products = load_products()
-    
-    total_stock = sum(p.get('stock', 0) for p in products)
-    total_price = sum(p.get('price', 0) for p in products)
-    avg_price = total_price / len(products) if products else 0
-    low_stock_products = len([p for p in products if p.get('stock', 0) < 10])
+    orders = load_orders()
+    reports = load_reports()
 
+    # Contar usuarios y administradores
+    total_users = len(users)
+    total_admins = sum(1 for u in users.values() if u.get('role') == 'admin')
+
+    # Contar productos (activos/inactivos)
+    total_products = len(products)
+    active_products = sum(1 for p in products.values() if p.get('is_active', False))
+
+    # Estadísticas de órdenes
+    total_orders = len(orders)
+    pending_orders = sum(1 for o in orders.values() if o.get('status') == 'pending')
+    completed_orders = sum(1 for o in orders.values() if o.get('status') == 'completed')
+
+    # Suma total de ingresos de órdenes completadas
+    total_revenue = sum(o.get('total_price', 0) for o in orders.values() if o.get('status') == 'completed')
+
+    # Calcular precio promedio de productos
+    if products:
+        avg_price = sum(p.get('price', 0) for p in products.values()) / len(products)
+    else:
+        avg_price = 0
+
+    # Notificaciones recientes (ejemplo: las últimas 5)
+    all_notifications = load_notifications()
+    recent_notifications = []
+    for user_notifs in all_notifications.values():
+        recent_notifications.extend(user_notifs)
+    recent_notifications = sorted(recent_notifications, key=lambda x: x.get('timestamp', '0'), reverse=True)[:5]
+
+    # Agrupar estadísticas en un diccionario
     stats = {
-        'total_products': len(products),
-        'total_stock': total_stock,
-        'avg_price': avg_price,
-        'low_stock_products': low_stock_products
+        'total_usuarios': total_users,
+        'total_administradores': total_admins,
+        'total_productos': total_products,
+        'productos_activos': active_products,
+        'total_ordenes': total_orders,
+        'ordenes_pendientes': pending_orders,
+        'ordenes_completadas': completed_orders,
+        'ingresos_totales': total_revenue,
+        'avg_price': avg_price
     }
-    
-    return render_template('admin_dashboard.html', stats=stats, products=products)
+
+    return render_template('admin_dashboard.html',
+                           stats=stats,
+                           recent_notifications=recent_notifications)
 
 @app.route('/admin/reports')
 @admin_required
 def admin_reports():
-    """Página para ver los reportes de los usuarios."""
-    reports = load_reports() 
-    sorted_reports = sorted(
-        reports,
-        key=lambda x: (0 if x['status'] == 'Abierto' else 1 if x['status'] == 'En Progreso' else 2, x['date']),
-        reverse=False 
-    )
-    return render_template('admin_reports.html', reports=sorted_reports)
-
-@app.route('/admin/reports/respond/<int:report_id>', methods=['POST'])
-@admin_required
-def admin_respond_report(report_id):
-    """
-    Maneja la respuesta y actualización del estado de un reporte.
-    Recibe los datos del modal en admin_reports.html via AJAX.
-    """
-    response_text = request.form.get('admin_response_text', '').strip()
-    new_status = request.form.get('report_status', '').strip()
-
+    """Genera y muestra informes de la tienda."""
     reports = load_reports()
-    report_found = False
-    for report in reports:
-        if report['id'] == report_id:
-            report_found = True
-            report['admin_response'] = response_text
-            report['status'] = new_status
-            
-            add_notification(report.get('user', 'Usuario Desconocido'), "reporte_respuesta", f"Respuesta a tu reporte #{report_id} ({report.get('type', 'General')})", f"Tu reporte: \"{report.get('description', '')[:50]}...\" ha sido actualizado a '{new_status}'. Respuesta: \"{response_text[:100]}...\"")
 
-            if 'status_history' not in report:
-                report['status_history'] = []
-            report['status_history'].append({
-                'timestamp': datetime.now().isoformat(),
-                'status': new_status,
-                'response': response_text,
-                'admin': session.get('admin_username', 'Desconocido')
-            })
-            break
-    
-    if report_found and save_reports(reports):
-        flash('Reporte actualizado exitosamente.', 'success')
-        return jsonify(success=True, message='Reporte actualizado.')
-    else:
-        flash('Error al actualizar el reporte.', 'error')
-        return jsonify(success=False, message='Error al actualizar el reporte.'), 400
+    # Ordenar por fecha de generación si lo deseas
+    reports_sorted = dict(sorted(reports.items(), key=lambda item: item[1].get('generated_at', ''), reverse=True))
+
+    return render_template('admin_reports.html', reports=reports_sorted)
 
 @app.route('/admin/logout')
 def admin_logout():
@@ -465,6 +387,184 @@ def admin_logout():
     session.pop('admin_username', None)
     flash('Sesión de administrador cerrada.', 'success')
     return redirect(url_for('home'))
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Página de inicio de sesión para administradores."""
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_dashboard'))
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        users = load_users()
+        admin = users.get('admin')
+        if admin and username == 'admin' and check_password_hash(admin['password'], password):
+            session['admin_logged_in'] = True
+            session['admin_username'] = 'admin'
+            flash('Bienvenido, administrador.', 'success')
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Credenciales incorrectas.', 'error')
+    return render_template('admin_login.html')
+
+
+@app.route('/admin/user_purchases')
+@admin_required
+def admin_user_purchases():
+    """Muestra el historial de compras de todos los usuarios para el administrador."""
+    purchases = load_user_purchases()
+    # Ordenar por fecha descendente
+    purchases_sorted = sorted(purchases, key=lambda x: x.get('order_date', ''), reverse=True)
+    return render_template('admin_user_purchases.html', purchases=purchases_sorted)
+
+@app.route('/admin/user_chats')
+@admin_required
+def admin_user_chats():
+    """Muestra la lista de usuarios con los que hay chat."""
+    # Obtener todos los chats agrupados por usuario
+    user_chats = get_all_user_chats()
+    # user_chats es un dict: {username: [mensajes]}
+    return render_template('admin_user_chats.html', user_chats=user_chats)
+
+@app.route('/admin/user_chats_overview')
+@admin_required
+def admin_user_chats_overview():
+    """Muestra una lista de usuarios que han escrito en el chat (sin mostrar mensajes)."""
+    user_chats = get_all_user_chats()
+    user_list = sorted(user_chats.keys())
+    return render_template('admin_user_chats_overview.html', user_list=user_list)
+
+@app.route('/admin/user_chat/<username>', methods=['GET', 'POST'])
+@admin_required
+def admin_user_chat(username):
+    chat_history = get_user_chat(username)
+    user_chats = get_all_user_chats()
+    user_list = sorted(user_chats.keys())
+    if request.method == 'POST':
+        message = request.form.get('message')
+        image_url = None
+        if 'admin_image' in request.files:
+            file = request.files['admin_image']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(f"admin_{username}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                image_url = f"/static/uploads/{filename}"
+        if message or image_url:
+            add_chat_message(username, 'admin', message, image_url=image_url)
+            flash('Mensaje enviado al usuario.', 'success')
+        return redirect(url_for('admin_user_chat', username=username))
+    return render_template('admin_user_chat.html', username=username, chat_history=chat_history, user_list=user_list)
+
+@app.route('/contact_admin', methods=['GET', 'POST'])
+@login_required
+def contact_admin():
+    username = session.get('user_username')
+    user_cart = get_cart(username)
+    products = load_products()
+    users = load_users()
+    current_user = users.get(username)
+
+    cart_items_details = []
+    total_price = 0
+
+    if user_cart:
+        for product_id, quantity in user_cart.items():
+            product = products.get(product_id)
+            if product:
+                item_total = product['price'] * quantity
+                total_price += item_total
+                cart_items_details.append({
+                    'id': product_id,
+                    'name': product['name'],
+                    'price': product['price'],
+                    'quantity': quantity,
+                    'image': product.get('image', '/static/images/default_product.png'),
+                    'total': item_total
+                })
+
+    chat_history = get_user_chat(username)
+
+    if request.method == 'POST':
+        message = request.form.get('message')
+        ancho = request.form.get('ancho')
+        ancho_unidad = request.form.get('ancho_unidad')
+        largo = request.form.get('largo')
+        largo_unidad = request.form.get('largo_unidad')
+        image_url = None
+        if 'admin_image' in request.files:
+            file = request.files['admin_image']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(f"{username}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                image_url = f"/static/uploads/{filename}"
+        # Registrar la compra como pendiente (flujo original)
+        orders = load_orders()
+        order_id = secrets.token_hex(8)
+        new_order = {
+            'order_id': order_id,
+            'username': username,
+            'items': [
+                {
+                    'product_id': item['id'],
+                    'name': item['name'],
+                    'quantity': item['quantity'],
+                    'price': item['price']
+                } for item in cart_items_details
+            ],
+            'total_price': total_price,
+            'payment_method_id': 'contact_admin',
+            'delivery_address': current_user.get('delivery_address', ''),
+            'order_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'status': 'pending',
+            'admin_message': message
+        }
+        orders[order_id] = new_order
+        save_orders(orders)
+        # Guardar mensaje en el chat (ahora con order_id)
+        msg_text = f"{message}\nTamaño solicitado: {ancho} {ancho_unidad} x {largo} {largo_unidad}"
+        add_chat_message(username, 'user', msg_text, image_url=image_url, order_id=order_id)
+        # Registrar en user_purchases.json
+        user_purchases = load_user_purchases()
+        user_purchases.append({
+            'order_id': order_id,
+            'username': username,
+            'items': new_order['items'],
+            'total_price': total_price,
+            'payment_method_id': 'contact_admin',
+            'delivery_address': current_user.get('delivery_address', ''),
+            'order_date': new_order['order_date'],
+            'status': 'pending',
+            'admin_message': message
+        })
+        save_user_purchases(user_purchases)
+        clear_user_persistent_cart(username)
+        flash('Tu solicitud ha sido enviada al administrador. Pronto te contactarán para finalizar la compra.', 'success')
+        return redirect(url_for('user_auth.user_orders'))
+
+    return render_template('contact_admin.html', cart_items=cart_items_details, total_price=total_price, chat_history=chat_history)
+
+@app.route('/user/chat', methods=['GET', 'POST'])
+@login_required
+def user_chat():
+    username = session.get('user_username')
+    chat_history = get_user_chat(username)
+    if request.method == 'POST':
+        message = request.form.get('message')
+        image_url = None
+        if 'user_image' in request.files:
+            file = request.files['user_image']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(f"{username}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                image_url = f"/static/uploads/{filename}"
+        if message or image_url:
+            add_chat_message(username, 'user', message, image_url=image_url)
+            flash('Mensaje enviado al administrador.', 'success')
+        return redirect(url_for('user_chat'))
+    return render_template('user_chat.html', chat_history=chat_history)
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -477,19 +577,49 @@ def internal_error(error):
     logger.exception("Ha ocurrido un error 500:")
     return render_template('error_500.html'), 500
 
+# --- Registro de compras de usuarios ---
+USER_PURCHASES_FILE = 'user_purchases.json'
+
+# --- Registro de pedidos de usuarios (debe ser un diccionario) ---
+ORDERS_FILE = 'orders.json'
+
+def load_orders():
+    if not os.path.exists(ORDERS_FILE):
+        return {}
+    with open(ORDERS_FILE, 'r', encoding='utf-8') as f:
+        try:
+            return json.load(f)
+        except Exception:
+            return {}
+
+def save_orders(orders):
+    with open(ORDERS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(orders, f, indent=2, ensure_ascii=False)
+
+def load_user_purchases():
+    if not os.path.exists(USER_PURCHASES_FILE):
+        return []
+    with open(USER_PURCHASES_FILE, 'r', encoding='utf-8') as f:
+        try:
+            return json.load(f)
+        except Exception:
+            return []
+
+def save_user_purchases(purchases):
+    with open(USER_PURCHASES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(purchases, f, indent=2, ensure_ascii=False)
+
 def init_app():
     """Inicializa la aplicación Flask, incluyendo la configuración de usuarios y el registro de Blueprints."""
-    init_admin_users() 
-    load_products()    
-    load_reports()     
-    load_user_carts()  
-    load_orders()      
+    init_admin_users()
     
-    app.register_blueprint(user_bp, url_prefix='/user')
-    app.register_blueprint(admin_products_bp, url_prefix='/admin')
-    logger.info("Blueprints de usuario y administrador registrados.")
+    # Asegúrate de que los archivos de datos existan para evitar errores al cargarlos
+    # Las funciones load_x() en data_manager.py deben manejar la creación de listas/diccionarios vacías
+    # si los archivos no existen.
 
 if __name__ == '__main__':
+    # La inicialización de la aplicación ahora se maneja en init_app()
+    # Esto es útil si tu aplicación es importada por otros scripts (ej. gunicorn)
+    # y quieres controlar cuándo se inicializa.
     init_app()
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
+    app.run(debug=True)

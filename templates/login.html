@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Iniciar Sesión - Marketplace{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-12 bg-white rounded-lg shadow-lg p-8">
+    <div class="text-center mb-8">
+        <i class="fas fa-sign-in-alt text-green-600 text-5xl mb-4"></i>
+        <h2 class="text-3xl font-bold text-gray-800">Iniciar Sesión</h2>
+    </div>
+
+    <form method="POST" action="{{ url_for('user_auth.login') }}">
+        <div class="mb-4">
+            <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Usuario o Email:</label>
+            <input type="text" id="username" name="username" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-green-500 focus:border-green-500"
+                   placeholder="Ingresa tu usuario o email">
+        </div>
+        <div class="mb-6">
+            <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Contraseña:</label>
+            <input type="password" id="password" name="password" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-green-500 focus:border-green-500"
+                   placeholder="Ingresa tu contraseña">
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition shadow-md font-semibold">
+            Ingresar
+        </button>
+    </form>
+    <p class="text-center text-gray-600 text-sm mt-4">
+        ¿No tienes una cuenta? <a href="{{ url_for('user_auth.register') }}" class="text-green-600 hover:underline">Regístrate aquí</a>
+    </p>
+</div>
+{% endblock %}

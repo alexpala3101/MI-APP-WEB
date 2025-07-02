@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md mb-8 mt-8 max-w-2xl mx-auto">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <i class="fas fa-comments mr-3 text-blue-500"></i>Chats de Usuarios
+    </h2>
+    {% if user_list %}
+    <ul class="divide-y divide-gray-200">
+        {% for username in user_list %}
+        <li class="py-3 flex items-center justify-between">
+            <span class="font-semibold text-gray-700">
+                <i class="fas fa-user-circle text-blue-400 mr-2"></i>{{ username }}
+            </span>
+            <a href="{{ url_for('admin_user_chat', username=username) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold flex items-center">
+                <i class="fas fa-comments mr-2"></i>Ver Chat
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="text-gray-500 text-center py-6">No hay chats de usuarios aún.</div>
+    {% endif %}
+</div>
+{% endblock %}

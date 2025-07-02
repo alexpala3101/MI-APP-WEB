@@ -1,15 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Marketplace{% endblock %}</title>
-    <!-- Enlace a Tailwind CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- Enlace a tu archivo CSS personalizado (debe estar en static/css/styles.css) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <!-- Enlace a Font Awesome CDN para iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -23,104 +19,163 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes bounceSlow {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-        @keyframes pulseSlow {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
+        .animate-fadeInDown { animation: fadeInDown 0.5s ease-out forwards; }
+        .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
+
+        /* Estilos para mensajes flash */
+        .flash-message {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem; /* rounded-md */
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
         }
 
-        .animate-fade-in-down { animation: fadeInDown 0.8s ease-out forwards; }
-        .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
-        .animate-zoom-in { animation: zoomIn 0.6s ease-out forwards; }
-        .animate-bounce-slow { animation: bounceSlow 2s infinite ease-in-out; }
-        .animate-pulse-slow { animation: pulseSlow 2s infinite ease-in-out; }
+        .flash-message .close-button {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            line-height: 1;
+            cursor: pointer;
+            color: inherit;
+            padding: 0 0.5rem;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .flash-message .close-button:hover {
+            opacity: 1;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Navegación -->
-    <nav class="bg-white shadow-lg py-4">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-                <a href="{{ url_for('home') }}" class="text-2xl font-bold text-blue-600 hover:text-blue-800 transition">
-                    <i class="fas fa-store mr-2"></i>Marketplace
-                </a>
-            </div>
-            <div class="flex items-center space-x-6">
-                <a href="{{ url_for('products') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">
-                    <i class="fas fa-shopping-bag mr-1"></i>Productos
-                </a>
-                {% if session.get('user_logged_in') %}
-                    <a href="{{ url_for('cart') }}" class="text-gray-700 hover:text-blue-600 font-medium transition relative">
-                        <i class="fas fa-shopping-cart mr-1"></i>Carrito
-                        {% if session.get('cart') and session.cart|length > 0 %}
-                        <span class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">
-                            {{ session.cart|length }}
-                        </span>
-                        {% endif %}
-                    </a>
-                    <a href="{{ url_for('user_auth.user_dashboard') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">
-                        <i class="fas fa-user-circle mr-1"></i>{{ session.user_username }}
-                    </a>
-                    <a href="{{ url_for('user_auth.user_logout') }}" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition">
-                        <i class="fas fa-sign-out-alt mr-1"></i>Salir
-                    </a>
-                {% else %}
-                    <a href="{{ url_for('user_auth.user_login') }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition">
-                        <i class="fas fa-sign-in-alt mr-1"></i>Iniciar Sesión
-                    </a>
-                    <a href="{{ url_for('user_auth.user_register') }}" class="text-blue-500 border border-blue-500 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-500 hover:text-white transition">
-                        <i class="fas fa-user-plus mr-1"></i>Registro
-                    </a>
-                {% endif %}
-                
-                {% if session.get('admin_logged_in') %}
-                    <a href="{{ url_for('admin_dashboard') }}" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition">
-                        <i class="fas fa-user-shield mr-1"></i>Admin
-                    </a>
-                {% else %}
-                    <a href="{{ url_for('admin_login') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">
-                        <i class="fas fa-user-shield mr-1"></i>Admin Login
-                    </a>
-                {% endif %}
-            </div>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+    <header class="bg-white shadow-md py-4">
+        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+            <a href="{{ url_for('home') }}" class="text-3xl font-bold text-blue-600 hover:text-blue-800 transition">Marketplace</a>
+            <nav class="flex items-center space-x-6">
+                <div class="hidden md:flex ml-10 space-x-8">
+                    <a href="{{ url_for('home') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">Productos</a>
+                    {% if session.get('user_logged_in') %}
+                        <a href="{{ url_for('user_auth.user_dashboard') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">Panel de usuario</a>
+                        <a href="{{ url_for('user_auth.user_orders') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">Mis pedidos</a>
+                        <a href="{{ url_for('cart') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">Carrito</a>
+                        <a href="{{ url_for('user_auth.logout') }}" class="text-red-500 hover:text-red-700 font-medium transition">Cerrar Sesión</a>
+                    {% elif session.get('admin_logged_in') %}
+                        <a href="{{ url_for('admin_dashboard') }}" class="text-gray-700 hover:text-blue-600 font-medium transition">Panel de Administración</a>
+                        <a href="{{ url_for('admin_logout') }}" class="text-red-500 hover:text-red-700 font-medium transition">Cerrar Sesión Admin</a>
+                    {% else %}
+                        <div class="relative">
+                            <button id="access-button" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold flex items-center">
+                                <i class="fas fa-user-circle mr-2"></i>
+                                Acceder
+                                <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                            </button>
+                            <div id="access-dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden z-10">
+                                <a href="{{ url_for('user_auth.login') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-user mr-2"></i>Iniciar Sesión Usuario
+                                </a>
+                                <a href="{{ url_for('user_auth.register') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-user-plus mr-2"></i>Registrarse
+                                </a>
+                                <div class="border-t border-gray-200 my-1"></div> {# Separador #}
+                                <!-- Enlace temporal al dashboard de admin hasta que exista el login de admin -->
+                                <a href="{{ url_for('admin_dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-user-shield mr-2"></i>Acceso de Administrador
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                <button id="menu-button" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gray-700">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </nav>
         </div>
-    </nav>
+        <div id="mobile-menu" class="md:hidden hidden bg-white px-4 pt-2 pb-4 space-y-1">
+            <a href="{{ url_for('home') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Productos</a>
+            {% if session.get('user_logged_in') %}
+                <a href="{{ url_for('user_auth.user_dashboard') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Panel de usuario</a>
+                <a href="{{ url_for('user_auth.user_orders') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Mis pedidos</a>
+                <a href="{{ url_for('cart') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Carrito</a>
+                <a href="{{ url_for('user_auth.logout') }}" class="block text-red-500 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Cerrar Sesión</a>
+            {% elif session.get('admin_logged_in') %}
+                <a href="{{ url_for('admin_dashboard') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Panel de Administración</a>
+                <a href="{{ url_for('admin_logout') }}" class="block text-red-500 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Cerrar Sesión Admin</a>
+            {% else %}
+                <a href="{{ url_for('user_auth.login') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Iniciar Sesión Usuario</a>
+                <a href="{{ url_for('user_auth.register') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Registrarse</a>
+                <!-- Enlace temporal al dashboard de admin hasta que exista el login de admin -->
+                <a href="{{ url_for('admin_dashboard') }}" class="block text-gray-700 hover:bg-gray-100 py-2 px-3 rounded-md text-base font-medium">Iniciar Sesión Admin</a>
+            {% endif %}
+        </div>
+    </header>
 
-    <!-- Mensajes Flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="max-w-7xl mx-auto px-4 py-4 w-full">
+            <div class="max-w-7xl mx-auto px-4 mt-4">
                 {% for category, message in messages %}
-                    <div class="flash-message alert-{{ category }} mb-4 p-4 rounded-lg shadow-md flex items-center">
-                        {% if category == 'success' %}<i class="fas fa-check-circle mr-2 text-green-700"></i>
-                        {% elif category == 'error' %}<i class="fas fa-times-circle mr-2 text-red-700"></i>
-                        {% elif category == 'info' %}<i class="fas fa-info-circle mr-2 text-blue-700"></i>
-                        {% elif category == 'warning' %}<i class="fas fa-exclamation-triangle mr-2 text-yellow-700"></i>
-                        {% endif %}
+                    <div class="flash-message relative {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}" role="alert">
                         <span>{{ message }}</span>
+                        <button type="button" class="close-button absolute top-1 right-2 text-lg" aria-label="Close" onclick="this.parentElement.style.display='none';">&times;</button>
                     </div>
                 {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
 
-    <!-- Contenido Principal -->
     <main class="flex-grow">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
     <footer class="bg-gray-800 text-white py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center">
-            <p>&copy; 2024 Marketplace. Todos los derechos reservados.</p>
+            <p>&copy; {{ 2025 }} Marketplace. Todos los derechos reservados.</p>
         </div>
     </footer>
+
+    <script>
+        // Script para ocultar mensajes flash después de un tiempo
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(msg => {
+                setTimeout(() => {
+                    msg.style.transition = 'opacity 0.5s ease-out';
+                    msg.style.opacity = '0';
+                    setTimeout(() => msg.remove(), 500); // Eliminar del DOM después de la transición
+                }, 5000); // Ocultar después de 5 segundos
+            });
+
+            // Script para el botón del menú móvil
+            const menuButton = document.getElementById('menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            if (menuButton && mobileMenu) {
+                menuButton.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+
+            // Script para el botón de acceso combinado
+            const accessButton = document.getElementById('access-button');
+            const accessDropdown = document.getElementById('access-dropdown');
+
+            if (accessButton && accessDropdown) {
+                accessButton.addEventListener('click', function() {
+                    accessDropdown.classList.toggle('hidden');
+                });
+
+                // Cerrar el dropdown si se hace clic fuera
+                document.addEventListener('click', function(event) {
+                    if (!accessButton.contains(event.target) && !accessDropdown.contains(event.target)) {
+                        accessDropdown.classList.add('hidden');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

@@ -335,6 +335,26 @@ def admin_orders():
     
     return render_template('admin_orders.html', orders=sorted_orders)
 
+@admin_products_bp.route('/admin/orders/delete/<int:order_id>', methods=['POST'])
+@admin_required
+def delete_order(order_id):
+    """
+    Elimina un pedido por su ID (solo admins).
+    """
+    orders = load_orders()
+    initial_count = len(orders)
+    orders = [o for o in orders if o.get('id') != order_id]
+    if len(orders) < initial_count:
+        # Guardar los pedidos actualizados
+        try:
+            with open('user_orders.json', 'w', encoding='utf-8') as f:
+                json.dump(orders, f, indent=2, ensure_ascii=False)
+            flash('¡Pedido eliminado exitosamente!', 'success')
+        except Exception as e:
+            flash(f'Error al eliminar el pedido: {e}', 'error')
+    else:
+        flash('No se encontró el pedido a eliminar.', 'error')
+    return redirect(url_for('admin_orders'))
 
 def create_admin_products_routes(app):
     """

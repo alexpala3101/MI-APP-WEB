@@ -1,0 +1,33 @@
+{
+    "admin": {
+        "username": "admin",
+        "email": "admin@marketplace.com",
+        "password": "pbkdf2:sha256:600000$rHXKu5iycm2qmbj2$5e436509f75baef8df0b6658b302c3017932ad4a31603963c3a5e6dfbeec6f1f",
+        "role": "admin",
+        "registration_date": "2025-07-02 13:08:02",
+        "last_login": null,
+        "is_active": true
+    },
+    "usuario1": {
+        "username": "usuario1",
+        "email": "usuario1@gmail.com",
+        "password": "pbkdf2:sha256:600000$1J0CMMBykvt293Nb$0c4ed7b259319b0ad87e7270fbee6d6924e16928ef2d3d35fc7f8edba06a8a74",
+        "role": "user",
+        "registration_date": "2025-07-02 10:14:19",
+        "last_login": "2025-07-02 12:51:28",
+        "is_active": true,
+        "delivery_address": "",
+        "payment_methods": []
+    },
+    "usuario2": {
+        "username": "usuario2",
+        "email": "usuario2@gmail.com",
+        "password": "pbkdf2:sha256:600000$pvdwBIgDfuo1ZPrr$7d63b089275b56d18fd86ee9b714bb5179b3040a9da5c8fdd7010d6156beadff",
+        "role": "user",
+        "registration_date": "2025-07-02 13:09:00",
+        "last_login": "2025-07-02 13:09:17",
+        "is_active": true,
+        "delivery_address": "",
+        "payment_methods": []
+    }
+}

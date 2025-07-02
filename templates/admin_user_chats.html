@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4"><i class="bi bi-people text-primary"></i> Chats con Usuarios</h2>
+  <div class="row">
+    {% for username, messages in user_chats.items() %}
+      <div class="col-12 col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-person-circle fs-2 text-primary me-2"></i>
+              <h5 class="mb-0">{{ username }}</h5>
+            </div>
+            <div class="mb-2 text-muted small">Último mensaje:
+              <br>
+              <span>{{ messages[-1].text if messages else 'Sin mensajes' }}</span>
+            </div>
+            <div class="mt-auto">
+              <a href="{{ url_for('admin_user_chat', username=username) }}" class="btn btn-outline-primary w-100">
+                <i class="bi bi-chat-dots"></i> Ver chat
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-info text-center">No hay chats de usuarios.</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

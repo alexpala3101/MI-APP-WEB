@@ -9,102 +9,116 @@
         </a>
     </div>
     
-    <!-- Tarjetas de Estadísticas -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between transition-transform transform hover:scale-105">
             <div class="flex items-center">
                 <i class="fas fa-box text-blue-600 text-3xl mr-4"></i>
                 <div>
                     <p class="text-gray-600 text-sm">Total Productos</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_products }}</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_productos }}</p>
                 </div>
             </div>
         </div>
+
         <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between transition-transform transform hover:scale-105">
             <div class="flex items-center">
-                <i class="fas fa-warehouse text-green-600 text-3xl mr-4"></i>
+                <i class="fas fa-users text-green-600 text-3xl mr-4"></i>
                 <div>
-                    <p class="text-gray-600 text-sm">Stock Total</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_stock }}</p>
+                    <p class="text-gray-600 text-sm">Total Usuarios</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_usuarios }}</p>
                 </div>
             </div>
         </div>
+
         <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between transition-transform transform hover:scale-105">
             <div class="flex items-center">
-                <i class="fas fa-dollar-sign text-yellow-600 text-3xl mr-4"></i>
+                <i class="fas fa-shopping-cart text-purple-600 text-3xl mr-4"></i>
                 <div>
-                    <p class="text-gray-600 text-sm">Precio Promedio</p>
+                    <p class="text-gray-600 text-sm">Total Órdenes</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_ordenes }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between transition-transform transform hover:scale-105">
+            <div class="flex items-center">
+                <i class="fas fa-dollar-sign text-red-600 text-3xl mr-4"></i>
+                <div>
+                    <p class="text-gray-600 text-sm">Ventas Totales</p>
+                    <p class="text-3xl font-bold text-gray-900">${{ "%.2f"|format(stats.ingresos_totales) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between transition-transform transform hover:scale-105">
+            <div class="flex items-center">
+                <i class="fas fa-tag text-yellow-600 text-3xl mr-4"></i>
+                <div>
+                    <p class="text-gray-600 text-sm">Precio Promedio Producto</p>
                     <p class="text-3xl font-bold text-gray-900">${{ "%.2f"|format(stats.avg_price) }}</p>
                 </div>
             </div>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-md flex items-center justify-between transition-transform transform hover:scale-105">
-            <div class="flex items-center">
-                <i class="fas fa-exclamation-triangle text-red-600 text-3xl mr-4"></i>
-                <div>
-                    <p class="text-gray-600 text-sm">Stock Bajo</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.low_stock_products }}</p>
-                </div>
-            </div>
-        </div>
     </div>
-    
-    <!-- Acciones Rápidas -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition flex flex-col items-center text-center">
-            <i class="fas fa-plus-circle text-blue-600 text-4xl mb-4"></i>
-            <h3 class="text-xl font-semibold mb-2 text-gray-900">Agregar Producto</h3>
-            <p class="text-gray-600 mb-4">Añadir nuevos productos al catálogo de la tienda.</p>
-            <a href="{{ url_for('admin_products.add_product') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
-                <i class="fas fa-plus mr-2"></i>Agregar
-            </a>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition flex flex-col items-center text-center">
-            <i class="fas fa-edit text-green-600 text-4xl mb-4"></i>
-            <h3 class="text-xl font-semibold mb-2 text-gray-900">Gestionar Productos</h3>
-            <p class="text-gray-600 mb-4">Editar, ver y eliminar productos existentes.</p>
-            <a href="{{ url_for('admin_products.manage_products') }}" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition shadow font-semibold">
-                <i class="fas fa-tasks mr-2"></i>Gestionar
-            </a>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition flex flex-col items-center text-center">
-            <i class="fas fa-chart-bar text-purple-600 text-4xl mb-4"></i>
-            <h3 class="text-xl font-semibold mb-2 text-gray-900">Reportes</h3>
-            <p class="text-gray-600 mb-4">Visualizar estadísticas y reportes de ventas.</p>
-            <a href="{{ url_for('admin_reports') }}" class="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition shadow font-semibold">
-                <i class="fas fa-chart-line mr-2"></i>Ver Reportes
-            </a>
-        </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <a href="{{ url_for('admin_products.manage_products') }}" class="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold flex items-center justify-center">
+            <i class="fas fa-cubes mr-2"></i>Gestionar Productos
+        </a>
+        <a href="{{ url_for('admin_users.manage_users') }}" class="bg-indigo-600 text-white px-5 py-3 rounded-lg hover:bg-indigo-700 transition shadow font-semibold flex items-center justify-center">
+            <i class="fas fa-users-cog mr-2"></i>Gestionar Usuarios
+        </a>
+        <a href="{{ url_for('admin_reports') }}" class="bg-purple-600 text-white px-5 py-3 rounded-lg hover:bg-purple-700 transition shadow font-semibold flex items-center justify-center">
+            <i class="fas fa-chart-bar mr-2"></i>Ver Reportes
+        </a>
+        <a href="{{ url_for('admin_user_purchases') }}" class="bg-green-600 text-white px-5 py-3 rounded-lg hover:bg-green-700 transition shadow font-semibold flex items-center justify-center">
+            <i class="fas fa-receipt mr-2"></i>Historial de Compras
+        </a>
+        <a href="{{ url_for('admin_products.admin_orders') }}" class="bg-yellow-500 text-white px-5 py-3 rounded-lg hover:bg-yellow-600 transition shadow font-semibold flex items-center justify-center">
+            <i class="fas fa-comments mr-2"></i>Gestion de Pedidos
+        </a>
+        <a href="{{ url_for('admin_user_chats_overview') }}" class="bg-cyan-600 text-white px-5 py-3 rounded-lg hover:bg-cyan-700 transition shadow font-semibold flex items-center justify-center">
+            <i class="fas fa-comment-dots mr-2"></i>Chats de Usuarios
+        </a>
     </div>
-    
-    <!-- Productos Recientes -->
-    <div class="mt-12">
-        <h2 class="text-2xl font-bold mb-6 text-gray-800">Productos Recientes</h2>
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="table-responsive">
-                <table class="w-full text-left table-auto">
-                    <thead class="bg-gray-50 border-b border-gray-200">
+
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-boxes mr-3 text-blue-500"></i>Productos Recientes</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ID
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Nombre
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Precio
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Stock
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Categoría
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Acciones
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for product in products|sort(attribute='id', reverse=true) %}
                         <tr>
-                            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
-                            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        {% for product in products[:5] %} {# Muestra los 5 productos más recientes #}
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <img class="h-10 w-10 rounded-full object-cover mr-3" src="{{ product.image_url }}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/e2e8f0/64748b?text=Img';" alt="{{ product.name }}">
-                                    <div class="text-sm font-medium text-gray-900">{{ product.name }}</div>
-                                </div>
-                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ product.id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ product.name }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ "%.2f"|format(product.price) }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    {% if product.stock < 10 %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                {% if product.stock > 10 %}bg-green-100 text-green-800
+                                {% elif product.stock > 0 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
                                     {{ product.stock }}
                                 </span>
                             </td>

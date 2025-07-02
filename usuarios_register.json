@@ -20,5 +20,15 @@
     "password": "08d2d5d646f44f095ce03cb2fb63505643958304e4a440c1710e3e9a26f146dc:9f0ddd571d7660edbfc8bbefe689699d04ccaf13f25826c65a25734f8ec62cbd",
     "email": "usuario1@gmail.com",
     "registration_date": "2025-06-16 14:07:26"
+  },
+  "admin": {
+    "username": "admin",
+    "email": "admin@marketplace.com",
+    "password": "pbkdf2:sha256:600000$lipseoalFIqhWH4M$91c75896f41a65416e868bd86c5ea8a76e3ee7f500f4f6ffb060c554897bb749",
+    "role": "admin",
+    "registration_date": "2025-07-01 11:04:07",
+    "last_login": null,
+    "is_active": true,
+    "notifications": []
   }
 }

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Contactar Administrador - Marketplace{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800 flex items-center">
+        <i class="fas fa-comments mr-3"></i>Contactar al Administrador
+    </h1>
+    <form method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div class="mb-4">
+            <label for="message" class="block text-gray-700 font-semibold mb-2">Mensaje para el administrador:</label>
+            <textarea id="message" name="message" rows="4" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></textarea>
+        </div>
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="ancho" class="block text-gray-700 font-semibold mb-2">Ancho:</label>
+                <div class="flex gap-2">
+                    <input type="number" min="0" step="0.01" name="ancho" id="ancho" placeholder="0" class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-blue-500 focus:border-blue-500" required>
+                    <select name="ancho_unidad" id="ancho_unidad" class="px-2 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="m">m</option>
+                        <option value="cm">cm</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label for="largo" class="block text-gray-700 font-semibold mb-2">Largo:</label>
+                <div class="flex gap-2">
+                    <input type="number" min="0" step="0.01" name="largo" id="largo" placeholder="0" class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-blue-500 focus:border-blue-500" required>
+                    <select name="largo_unidad" id="largo_unidad" class="px-2 py-2 border border-gray-300 rounded-lg text-gray-800 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="m">m</option>
+                        <option value="cm">cm</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label for="admin_image" class="block text-gray-700 font-semibold mb-2">Adjuntar imagen:</label>
+            <input type="file" id="admin_image" name="admin_image" accept="image/*" capture class="block w-full text-gray-700 border border-gray-300 rounded-lg cursor-pointer focus:ring-blue-500 focus:border-blue-500">
+            <small class="text-gray-500">Se solicitará permiso para acceder a tus imágenes. Compatible con PC y móvil.</small>
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
+            <i class="fas fa-paper-plane mr-2"></i>Enviar Solicitud
+        </button>
+    </form>
+    <div class="bg-gray-50 p-6 rounded-lg shadow mb-6">
+        <h2 class="text-lg font-bold text-gray-700 mb-4">Resumen de tu pedido</h2>
+        {% if cart_items %}
+        <ul class="divide-y divide-gray-200 mb-4">
+            {% for item in cart_items %}
+            <li class="py-2 flex items-center justify-between gap-4">
+                <img src="{{ item.image | default('https://placehold.co/60x60/e2e8f0/64748b?text=No+Img') }}" onerror="this.onerror=null;this.src='https://placehold.co/60x60/e2e8f0/64748b?text=No+Img';" alt="{{ item.name }}" class="w-12 h-12 object-cover rounded shadow mr-3">
+                <span class="flex-1">{{ item.name }} <span class="text-gray-500">x{{ item.quantity }}</span></span>
+                <span class="font-semibold">${{ "%.2f"|format(item.price * item.quantity) }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        <div class="text-right font-bold text-xl text-gray-900">Total: ${{ "%.2f"|format(total_price) }}</div>
+        {% else %}
+        <div class="text-gray-500">Tu carrito está vacío.</div>
+        {% endif %}
+    </div>
+    <a href="{{ url_for('cart') }}" class="inline-block bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition shadow">
+        <i class="fas fa-arrow-left mr-2"></i>Volver al Carrito
+    </a>
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-lg font-bold text-gray-700 mb-4">Historial de Chat</h2>
+        {% if chat_history %}
+        <ul class="space-y-3 max-h-64 overflow-y-auto mb-4">
+            {% for msg in chat_history %}
+            <li class="flex flex-col {% if msg.from == 'user' %}items-end{% else %}items-start{% endif %}">
+                <div class="inline-block px-4 py-2 rounded-lg {% if msg.from == 'user' %}bg-blue-100 text-blue-900{% else %}bg-gray-200 text-gray-800{% endif %}">
+                    <span class="block text-xs font-semibold mb-1">{{ 'Tú' if msg.from == 'user' else 'Admin' }}</span>
+                    <span>{{ msg.text }}</span>
+                    {% if msg.image_url %}
+                        <img src="{{ msg.image_url }}" alt="Imagen adjunta" class="mt-2 max-w-xs rounded shadow">
+                    {% endif %}
+                </div>
+                <span class="text-xs text-gray-400 mt-1">{{ msg.timestamp }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-gray-500">No hay mensajes previos.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -4,21 +4,30 @@
 <div class="max-w-3xl mx-auto px-4 py-8 bg-white rounded-lg shadow-lg mt-8">
     <div class="header text-center mb-8 bg-blue-100 p-6 rounded-lg">
         <h1 class="text-3xl font-bold text-blue-800 mb-2">Panel de Usuario</h1>
-        <p class="text-xl text-blue-600">¡Bienvenido, {{ user.username }}!</p>
+        <p class="text-xl text-blue-600">¡Bienvenido, {{ username }}!</p>
     </div>
 
     <div class="info-section bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8">
         <h3 class="text-xl font-semibold text-gray-800 mb-4">Detalles de la Cuenta</h3>
-        <p class="text-gray-700 mb-2"><strong>Email:</strong> {{ user.email }}</p>
-        <p class="text-gray-700"><strong>Miembro desde:</strong> {{ user.registration_date }}</p>
+        {# Cambiado de 'user.email' a 'user.get('email', 'N/A')' #}
+        <p class="text-gray-700 mb-2"><strong>Email:</strong> {{ user.get('email', 'N/A') }}</p>
+        {# Cambiado de 'user.registration_date' a 'user.get('registration_date', 'N/A')' #}
+        <p class="text-gray-700"><strong>Miembro desde:</strong> {{ user.get('registration_date', 'N/A') }}</p>
+        {# Cambiado de 'user.delivery_address' a 'user.get('delivery_address')' #}
+        {% if user.get('delivery_address') %}
+            {# Cambiado de 'user.delivery_address' a 'user.get('delivery_address', 'N/A')' #}
+            <p class="text-gray-700"><strong>Dirección de Entrega:</strong> {{ user.get('delivery_address', 'N/A') }}</p>
+        {% else %}
+            <p class="text-gray-700 italic">No tienes una dirección de entrega configurada. <a href="{{ url_for('user_auth.user_edit_profile') }}" class="text-blue-600 hover:underline">Añadir ahora</a></p>
+        {% endif %}
     </div>
 
     <div class="dashboard-links grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <a href="{{ url_for('user_auth.user_profile') }}" class="flex items-center justify-center p-4 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition transform hover:scale-105">
+        <a href="{{ url_for('user_auth.user_edit_profile') }}" class="flex items-center justify-center p-4 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition transform hover:scale-105">
             <i class="fas fa-user mr-3 text-xl"></i>
             <span class="font-semibold text-lg">Ver Perfil</span>
         </a>
-        <a href="{{ url_for('user_auth.user_settings') }}" class="flex items-center justify-center p-4 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition transform hover:scale-105">
+        <a href="{{ url_for('user_auth.user_edit_profile') }}" class="flex items-center justify-center p-4 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600 transition transform hover:scale-105">
             <i class="fas fa-cog mr-3 text-xl"></i>
             <span class="font-semibold text-lg">Configuración de Cuenta</span>
         </a>
@@ -26,15 +35,25 @@
             <i class="fas fa-box-open mr-3 text-xl"></i>
             <span class="font-semibold text-lg">Mis Pedidos</span>
         </a>
+        <a href="{{ url_for('user_auth.user_notifications') }}" class="flex items-center justify-center p-4 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600 transition transform hover:scale-105">
+            <i class="fas fa-bell mr-3 text-xl"></i>
+            <span class="font-semibold text-lg">Notificaciones</span>
+        </a>
         <a href="{{ url_for('user_auth.user_privacy') }}" class="flex items-center justify-center p-4 bg-indigo-500 text-white rounded-lg shadow-md hover:bg-indigo-600 transition transform hover:scale-105">
             <i class="fas fa-shield-alt mr-3 text-xl"></i>
             <span class="font-semibold text-lg">Privacidad</span>
         </a>
+        <a href="{{ url_for('user_chat') }}" class="flex items-center justify-center p-4 bg-blue-700 text-white rounded-lg shadow-md hover:bg-blue-800 transition transform hover:scale-105">
+            <i class="fas fa-comments mr-3 text-xl"></i>
+            <span class="font-semibold text-lg">Chat con Administrador</span>
+        </a>
+        {# NOTA: El enlace a "Métodos de Pago" se ha eliminado de aquí, si lo necesitas añádelo de nuevo #}
     </div>
 
     <div class="text-center">
-        <a href="{{ url_for('user_auth.user_logout') }}" class="bg-red-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-red-700 transition shadow-md">
-            <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+        {# Asegúrate de que esta ruta sea correcta, si no existe 'user_logout' en user_auth, usa 'logout' #}
+        <a href="{{ url_for('user_auth.logout') }}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition">
+            <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
         </a>
     </div>
 </div>

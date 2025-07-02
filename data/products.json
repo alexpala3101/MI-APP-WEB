@@ -1,5 +1,5 @@
-[
-  {
+{
+  "1": {
     "id": 1,
     "name": "Tableros electronicos P10",
     "price": 330000.0,
@@ -8,7 +8,7 @@
     "stock": 5,
     "image_url": "https://www.proyectoselectronicoss.com/wp-content/uploads/2020/04/Modulo-matriz-led-RGB-P10.png"
   },
-  {
+  "2": {
     "id": 2,
     "name": "Tableros electronicos RGB",
     "price": 480000.0,
@@ -17,7 +17,7 @@
     "stock": 3,
     "image_url": "https://electronilab.co/wp-content/uploads/2014/06/PanelRGB32x32_Electronilab_5.jpg"
   },
-  {
+  "3": {
     "id": 3,
     "name": "Diseños Neos Personalizados",
     "price": 50000.0,
@@ -26,7 +26,7 @@
     "stock": 5,
     "image_url": "https://tarjetasdepresentacionbogota.co/wp-content/uploads/2021/06/letrero-monster-neonflex-768x1024.jpg"
   },
-  {
+  "4": {
     "id": 4,
     "name": "Pantallas Para Imagenes Y Video",
     "price": 1500000.0,
@@ -35,13 +35,5 @@
     "updated_at": "2025-06-14T16:31:39.159703",
     "stock": 6,
     "image_url": "https://es.huasuny.com/uploadfile/202101/20/2070a58080071376df30d5c740f4f50c_medium.jpg"
-  },
-  {
-    "id": 5,
-    "name": "luces led ",
-    "description": "compra tus luces led RGB",
-    "price": 45.0,
-    "stock": 5,
-    "image_url": "https://cinelight.com/img/cms/POZE%20BLOG/RGB%20Lighting/RGBWW_LED_SMD_Strip.jpg"
   }
-]
+}

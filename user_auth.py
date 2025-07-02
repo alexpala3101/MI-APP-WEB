@@ -1,668 +1,455 @@
 # user_auth.py
+
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from functools import wraps
 from datetime import datetime
-import hashlib
+from werkzeug.security import generate_password_hash, check_password_hash
 import json
 import os
 import re
 import secrets
 
-# Archivos simulados de base de datos
-USERS_FILE = 'usuarios_register.json'
-NOTIFICATIONS_FILE = 'notifications.json'
-PAYMENT_METHODS_FILE = 'payment_methods.json'
-USER_CARTS_FILE = 'user_carts.json' 
+# --- IMPORTACIONES DESDE data_manager.py ---
+# Todas las funciones de carga y guardado de datos deben venir de aquí.
+from data_manager import (
+    load_users, save_users, load_products, save_products, load_orders, save_orders,
+    load_notifications, save_notifications, load_payment_methods, save_payment_methods,
+    load_user_carts, save_user_carts,
+    USERS_FILE, NOTIFICATIONS_FILE, PAYMENT_METHODS_FILE, USER_CARTS_FILE
+)
+# Aquí también, importas estas funciones directamente desde data_manager
+from data_manager import add_notification, get_cart, add_to_cart, remove_from_cart, update_cart_quantity, clear_user_persistent_cart
+from data_manager_chat import get_user_chats_by_order
 
-# Define CART_SESSION_KEY aquí también, ya que las funciones de carrito lo necesitan.
+
+# Define CART_SESSION_KEY aquí también si es necesario para funciones de carrito internas
 CART_SESSION_KEY = 'cart'
 
 # Blueprint para la autenticación de usuarios
 user_bp = Blueprint('user_auth', __name__)
 
-# Importar funciones necesarias desde app.py para evitar duplicación de lógica de carga de datos
-try:
-    from app import load_products 
-except ImportError:
-    # Fallback si load_products no puede ser importado
-    def load_products():
-        if not os.path.exists('products.json'):
-            return []
-        try:
-            with open('products.json', 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Error al cargar productos en user_auth.py (fallback): {e}")
-            return []
-
-try:
-    from app import load_orders 
-except ImportError:
-    # Fallback si load_orders no puede ser importado
-    def load_orders():
-        if not os.path.exists('user_orders.json'):
-            return []
-        try:
-            with open('user_orders.json', 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Error al cargar pedidos en user_auth.py (fallback): {e}")
-            return []
-
-
-def load_users():
-    """Carga los usuarios desde el archivo JSON."""
-    if os.path.exists(USERS_FILE):
-        try:
-            with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error al cargar usuarios: {e}")
-            return {} 
-    return {}
-
-def save_users(users):
-    """Guarda los usuarios en el archivo JSON."""
-    try:
-        with open(USERS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(users, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Error al guardar usuarios: {e}")
-        return False
-
-def hash_password(password):
-    """Hashea una contraseña con un salt aleatorio."""
-    salt = secrets.token_hex(32)
-    password_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
-    return f"{salt}:{password_hash}"
-
-def verify_password(stored_password, provided_password):
-    """Verifica una contraseña proporcionada contra una contraseña hasheada almacenada."""
-    try:
-        salt, stored_hash = stored_password.split(':')
-        provided_hash = hashlib.pbkdf2_hmac('sha256', provided_password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
-        return provided_hash == stored_hash
-    except ValueError: 
-        return False
-
-def user_required(f):
-    """
-    Decorador para asegurar que el usuario está logueado.
-    Redirige al inicio de sesión de usuario si no está autenticado.
-    """
+# Decorador para requerir autenticación de usuario
+def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_logged_in' not in session:
-            flash('Debes iniciar sesión para ver esta página.', 'error')
-            return redirect(url_for('user_auth.user_login'))
+        if not session.get('user_logged_in'):
+            flash('Necesitas iniciar sesión para acceder a esta página.', 'warning')
+            return redirect(url_for('user_auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
-# --- Funciones para manejar Notificaciones ---
-def load_notifications():
-    """Carga las notificaciones desde el archivo JSON."""
-    if not os.path.exists(NOTIFICATIONS_FILE):
-        initial_notifications = [
-            {"id": 1, "user_username": "usuario1", "type": "oferta", "title": "¡Oferta Semanal!", "message": "25% de descuento en todos los auriculares gaming.", "timestamp": "2024-06-14 10:00:00", "read": False},
-            {"id": 2, "user_username": "usuario2", "type": "actualizacion", "title": "Mejoras en la App", "message": "Hemos actualizado la interfaz de usuario para una mejor experiencia.", "timestamp": "2024-06-15 09:30:00", "read": False},
-            {"id": 3, "user_username": "usuario1", "type": "compra", "title": "Tu pedido #1234 ha sido enviado", "message": "Tu laptop gaming está en camino. ¡Revisa el seguimiento!", "timestamp": "2024-06-15 14:00:00", "read": False}
-        ]
-        try:
-            with open(NOTIFICATIONS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(initial_notifications, f, indent=2, ensure_ascii=False)
-            print("Archivo de notificaciones inicializado con datos de ejemplo.")
-            return initial_notifications
-        except Exception as e:
-            print(f"Error al inicializar el archivo de notificaciones: {e}")
-            return []
-    try:
-        with open(NOTIFICATIONS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        print(f"Error al cargar notificaciones: {e}")
-        return []
+# Funciones de utilidad para validación (pueden estar en un archivo de utilidades separado)
+def is_valid_email(email):
+    """Valida si la cadena es un email con un formato básico."""
+    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
-def save_notifications(notifications):
-    """Guarda las notificaciones en el archivo JSON."""
-    try:
-        with open(NOTIFICATIONS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(notifications, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Error al guardar notificaciones: {e}")
-        return False
-
-def add_notification(user_username, notification_type, title, message, related_id=None):
-    """Añade una nueva notificación para un usuario específico."""
-    notifications = load_notifications()
-    new_id = 1
-    if notifications:
-        new_id = max(n['id'] for n in notifications) + 1
-    
-    new_notification = {
-        "id": new_id,
-        "user_username": user_username,
-        "type": notification_type,
-        "title": title,
-        "message": message,
-        "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        "read": False
-    }
-    if related_id:
-        new_notification['related_id'] = related_id 
-    
-    notifications.append(new_notification)
-    return save_notifications(notifications)
-
-# --- Funciones para manejar Métodos de Pago ---
-def load_payment_methods():
-    """Carga los métodos de pago desde el archivo JSON."""
-    if not os.path.exists(PAYMENT_METHODS_FILE):
-        with open(PAYMENT_METHODS_FILE, 'w', encoding='utf-8') as f:
-            json.dump([], f, indent=2, ensure_ascii=False)
-        return []
-    try:
-        with open(PAYMENT_METHODS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        print(f"Error al cargar métodos de pago: {e}")
-        return []
-
-def save_payment_methods(methods):
-    """Guarda los métodos de pago en el archivo JSON."""
-    try:
-        with open(PAYMENT_METHODS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(methods, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Error al guardar métodos de pago: {e}")
-        return False
-
-# --- Funciones para manejar Carritos Persistentes ---
-def load_user_carts():
-    """Carga todos los carritos de usuario desde el archivo JSON."""
-    if not os.path.exists(USER_CARTS_FILE):
-        with open(USER_CARTS_FILE, 'w', encoding='utf-8') as f:
-            json.dump({}, f, indent=2, ensure_ascii=False) 
-        return {}
-    try:
-        with open(USER_CARTS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        print(f"Error al cargar carritos de usuario: {e}")
-        return {}
-
-def save_user_carts(all_carts):
-    """Guarda todos los carritos de usuario en el archivo JSON."""
-    try:
-        with open(USER_CARTS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(all_carts, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Error al guardar carritos de usuario: {e}")
-        return False
-
-def get_cart():
-    """Obtiene el carrito actual del usuario desde la sesión, o desde el archivo persistente si no está en sesión."""
-    if 'user_logged_in' in session and session.get('user_username'):
-        username = session['user_username']
-        if CART_SESSION_KEY not in session: 
-            all_carts = load_user_carts()
-            session[CART_SESSION_KEY] = all_carts.get(username, {})
-        return session.get(CART_SESSION_KEY, {})
-    else:
-        return session.get(CART_SESSION_KEY, {})
-
-def add_to_cart(product_id, quantity=1):
-    """Agrega un producto al carrito y lo guarda de forma persistente si el usuario está logueado."""
-    cart = get_cart() 
-    product_id_str = str(product_id)
-
-    products = load_products() 
-    product = next((p for p in products if p['id'] == int(product_id_str)), None)
-
-    if not product:
-        flash('Producto no encontrado.', 'error')
-        return
-
-    if product['stock'] < quantity:
-        flash(f'No hay suficiente stock para {product["name"]}. Stock disponible: {product["stock"]}.', 'error')
-        return
-    
-    if product_id_str in cart:
-        if cart[product_id_str]['quantity'] + quantity > product['stock']:
-            flash(f'No se puede agregar más de {product["stock"]} unidades de {product["name"]} al carrito.', 'error')
-            return
-        cart[product_id_str]['quantity'] += quantity
-    else:
-        cart[product_id_str] = {
-            'name': product['name'],
-            'price': product['price'],
-            'quantity': quantity,
-            'image_url': product['image_url']
-        }
-    
-    session[CART_SESSION_KEY] = cart 
-    session.permanent = True 
-    
-    if 'user_logged_in' in session and session.get('user_username'):
-        username = session['user_username']
-        all_carts = load_user_carts()
-        all_carts[username] = cart 
-        save_user_carts(all_carts) 
-    
-    flash(f'"{product["name"]}" se ha agregado al carrito.', 'success')
-
-def remove_from_cart(product_id):
-    """Elimina un producto del carrito y lo guarda de forma persistente si el usuario está logueado."""
-    cart = get_cart()
-    product_id_str = str(product_id)
-    if product_id_str in cart:
-        del cart[product_id_str]
-        session[CART_SESSION_KEY] = cart
-        
-        if 'user_logged_in' in session and session.get('user_username'):
-            username = session['user_username']
-            all_carts = load_user_carts()
-            all_carts[username] = cart
-            save_user_carts(all_carts)
-        
-        flash('Producto eliminado del carrito.', 'info')
-    else:
-        flash('El producto no se encontró en el carrito.', 'error')
-
-def update_cart_quantity(product_id, new_quantity):
-    """Actualiza la cantidad de un producto en el carrito y lo guarda de forma persistente si el usuario está logueado."""
-    cart = get_cart()
-    product_id_str = str(product_id)
-    
-    products = load_products() 
-    product_in_db = next((p for p in products if p['id'] == int(product_id_str)), None)
-
-    if product_id_str in cart and product_in_db:
-        if new_quantity <= 0:
-            remove_from_cart(product_id) 
-            return
-
-        if new_quantity > product_in_db['stock']:
-            flash(f'Solo hay {product_in_db["name"]} disponibles en stock: {product_in_db["stock"]}.', 'error')
-            cart[product_id_str]['quantity'] = product_in_db['stock']
-        else:
-            cart[product_id_str]['quantity'] = new_quantity
-        
-        session[CART_SESSION_KEY] = cart
-        
-        if 'user_logged_in' in session and session.get('user_username'):
-            username = session['user_username']
-            all_carts = load_user_carts()
-            all_carts[username] = cart
-            save_user_carts(all_carts)
-        
-        flash(f'Cantidad de "{product_in_db["name"]}" actualizada a {new_quantity}.', 'success')
-    else:
-        flash('Producto no encontrado en el carrito.', 'error')
-
-def clear_user_persistent_cart(username):
-    """Limpia el carrito persistente de un usuario específico."""
-    all_carts = load_user_carts()
-    if username in all_carts:
-        all_carts[username] = {} 
-        save_user_carts(all_carts)
-
-# --- Rutas para el Blueprint de Usuario ---
-
-@user_bp.route('/user/register', methods=['GET', 'POST'])
-def user_register():
+def is_valid_password(password):
     """
-    Maneja el registro de nuevos usuarios.
-    Incluye validación de entrada para usuario, email y contraseña.
+    Valida la fortaleza de la contraseña:
+    - Mínimo 8 caracteres, máximo 20.
+    - Al menos una letra mayúscula, una minúscula, un número y un símbolo.
     """
+    if not (8 <= len(password) <= 20):
+        return False
+    if not re.search(r"[a-z]", password): return False
+    if not re.search(r"[A-Z]", password): return False
+    if not re.search(r"\d", password): return False
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password): return False
+    return True
+
+@user_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    """Ruta para el registro de nuevos usuarios."""
     if request.method == 'POST':
-        username = request.form['username'].lower()
+        username = request.form['username'].strip()
+        email = request.form['email'].strip()
         password = request.form['password']
-        email = request.form['email']
-        # NUEVO: Campo de dirección de entrega al registrarse
-        delivery_address = request.form.get('delivery_address', '').strip()
 
         users = load_users()
 
-        if not (6 <= len(username) <= 20 and username.isalnum()):
+        # Validaciones
+        if not username or not email or not password:
+            flash('Todos los campos son obligatorios.', 'error')
+            return render_template('user_register.html')
+        
+        if not (6 <= len(username) <= 20) or not username.isalnum():
             flash('El nombre de usuario debe tener entre 6 y 20 caracteres alfanuméricos.', 'error')
-        elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            return render_template('user_register.html', username=username, email=email)
+
+        if any(u_data['username'] == username for u_data in users.values()):
+            flash('Nombre de usuario ya existe.', 'error')
+            return render_template('user_register.html', email=email) # Mantener email para comodidad
+
+        if not is_valid_email(email):
             flash('Formato de email inválido.', 'error')
-        elif not (8 <= len(password) <= 20 and
-                  re.search(r'[a-z]', password) and
-                  re.search(r'[A-Z]', password) and
-                  re.search(r'[0-9]', password) and
-                  re.search(r'[!@#$%^&*(),.?":{}|<>]', password)):
-            flash('La contraseña debe tener entre 8 y 20 caracteres, e incluir mayúsculas, minúsculas, números y símbolos.', 'error')
-        elif username in users:
-            flash('El nombre de usuario ya existe. Por favor, elige otro.', 'error')
-        elif any(u['email'] == email for u in users.values()):
-            flash('El email ya está registrado. Por favor, utiliza otro.', 'error')
-        else:
-            hashed_password = hash_password(password)
-            users[username] = {
-                'username': username,
-                'password': hashed_password,
-                'email': email,
-                'registration_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'delivery_address': delivery_address # Guardar la dirección
-            }
-            if save_users(users):
-                flash('¡Registro exitoso! Ahora puedes iniciar sesión.', 'success')
-                return redirect(url_for('user_auth.user_login'))
-            else:
-                flash('Error al guardar el usuario. Inténtalo de nuevo.', 'error')
-    
+            return render_template('user_register.html', username=username) # Mantener username
+
+        if any(u_data['email'] == email for u_data in users.values()):
+            flash('Este email ya está registrado.', 'error')
+            return render_template('user_register.html', username=username)
+
+        if not is_valid_password(password):
+            flash('La contraseña debe tener entre 8 y 20 caracteres, e incluir al menos una mayúscula, una minúscula, un número y un símbolo.', 'error')
+            return render_template('user_register.html', username=username, email=email)
+
+        # Hashear la contraseña antes de guardar
+        hashed_password = generate_password_hash(password)
+
+        # Guardar el usuario usando el username como clave
+        users[username] = {
+            'username': username,
+            'email': email,
+            'password': hashed_password, # Guardar el hash
+            'role': 'user', # Rol por defecto
+            'registration_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'last_login': None,
+            'is_active': True,
+            'delivery_address': '', # Dirección de entrega por defecto
+            'payment_methods': [] # Métodos de pago vacíos por defecto
+        }
+        save_users(users)
+        flash('Registro exitoso. ¡Ahora puedes iniciar sesión!', 'success')
+        return redirect(url_for('user_auth.login'))
     return render_template('user_register.html')
 
-@user_bp.route('/user/login', methods=['GET', 'POST'])
-def user_login():
-    """
-    Maneja el inicio de sesión de usuario.
-    Verifica las credenciales y establece la sesión.
-    Después del login exitoso, carga el carrito persistente del usuario en la sesión.
-    """
-    if request.method == 'POST':
-        username = request.form['username'].lower()
-        password = request.form['password']
-        users = load_users()
 
-        if username in users and verify_password(users[username]['password'], password):
-            session['user_logged_in'] = True
-            session['user_username'] = username
-            
-            all_carts = load_user_carts()
-            session[CART_SESSION_KEY] = all_carts.get(username, {}) 
-            
-            flash('¡Inicio de sesión exitoso!', 'success')
-            return redirect(url_for('user_auth.user_dashboard'))
+@user_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    """Ruta para el inicio de sesión de usuarios."""
+    if request.method == 'POST':
+        username_or_email = request.form['username'].strip() # Aceptar usuario o email
+        password = request.form['password']
+
+        users = load_users()
+        user = None
+
+        # Intenta encontrar usuario por username o email
+        for u_data in users.values():
+            if u_data['username'] == username_or_email or u_data['email'] == username_or_email:
+                user = u_data
+                break
+
+        if user:
+            # Usar check_password_hash para verificar la contraseña
+            # Compara la contraseña ingresada con el hash almacenado de forma segura
+            if check_password_hash(user['password'], password):
+                session.permanent = True # Hacer la sesión permanente
+                session['user_logged_in'] = True
+                session['user_username'] = user['username']
+                session['user_email'] = user['email']
+                user['last_login'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                save_users(users)
+                flash(f'¡Bienvenido de nuevo, {user["username"]}!', 'success')
+                return redirect(url_for('user_auth.user_dashboard'))
+            else:
+                flash('Contraseña incorrecta.', 'error')
         else:
-            flash('Usuario o contraseña incorrectos.', 'error')
-            
+            flash('Usuario o email no encontrado.', 'error')
+
     return render_template('user_login.html')
 
-@user_bp.route('/user/dashboard')
-@user_required
+@user_bp.route('/dashboard')
+@login_required
 def user_dashboard():
-    """
-    Muestra el panel de usuario.
-    Requiere que el usuario esté logueado.
-    """
-    username = session['user_username']
+    """Muestra el panel de control del usuario."""
+    username = session.get('user_username')
     users = load_users()
-    user = users.get(username)
-    if user:
-        return render_template('user_dashboard.html', user=user)
-    flash('No se encontró la información del usuario.', 'error')
-    return redirect(url_for('user_auth.user_login'))
+    user = users.get(username) # Obtener todos los datos del usuario
 
-@user_bp.route('/user/logout')
-@user_required
-def user_logout():
-    """
-    Cierra la sesión del usuario.
-    Antes de cerrar, guarda el carrito de la sesión en el almacenamiento persistente.
-    """
-    if 'user_username' in session and CART_SESSION_KEY in session: 
-        username = session['user_username']
-        all_carts = load_user_carts()
-        all_carts[username] = session[CART_SESSION_KEY] 
-        save_user_carts(all_carts)
-
-    session.pop('user_logged_in', None)
-    session.pop('user_username', None)
-    session.pop(CART_SESSION_KEY, None) 
-    flash('Has cerrado sesión.', 'info')
-    return redirect(url_for('home'))
-
-@user_bp.route('/user/profile')
-@user_required
-def user_profile():
-    """
-    Muestra la página de perfil del usuario.
-    """
-    username = session['user_username']
-    users = load_users()
-    user = users.get(username)
     if not user:
-        flash('No se pudo cargar el perfil del usuario.', 'error')
-        return redirect(url_for('user_auth.user_dashboard'))
+        flash('Error al cargar los datos del usuario.', 'error')
+        return redirect(url_for('user_auth.login'))
 
-    # Ahora renderiza el archivo user_profile.html
-    return render_template('user_profile.html', user=user)
+    return render_template('user_dashboard.html', username=username, user=user)
 
-@user_bp.route('/user/profile/edit', methods=['GET', 'POST']) # NUEVA RUTA PARA EDITAR PERFIL
-@user_required
+@user_bp.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
 def user_edit_profile():
-    """
-    Permite al usuario editar su información de perfil, incluyendo la dirección de entrega.
-    """
-    username = session['user_username']
+    """Permite al usuario editar su perfil."""
+    username = session.get('user_username')
     users = load_users()
     user = users.get(username)
 
     if not user:
-        flash('Error: No se encontró tu perfil de usuario.', 'error')
+        flash('Error: Usuario no encontrado.', 'error')
         return redirect(url_for('user_auth.user_dashboard'))
 
     if request.method == 'POST':
+        # Los campos de username y email no deben ser editables aquí si son usados para login
+        # Si se permiten cambios, deben validarse cuidadosamente (ej. unicidad)
         new_email = request.form.get('email', '').strip()
         new_delivery_address = request.form.get('delivery_address', '').strip()
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
 
-        # Validaciones para el email (si se cambia)
-        if new_email and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', new_email):
-            flash('Formato de email inválido.', 'error')
-            return redirect(url_for('user_auth.user_edit_profile'))
-        
-        # Verificar si el nuevo email ya está en uso por otro usuario
+        # Validación de email
         if new_email and new_email != user['email']:
-            if any(u['email'] == new_email for u_username, u in users.items() if u_username != username):
-                flash('El email ya está registrado por otro usuario.', 'error')
-                return redirect(url_for('user_auth.user_edit_profile'))
+            if not is_valid_email(new_email):
+                flash('Formato de email inválido.', 'error')
+                return render_template('user_edit_profile.html', user=user)
+            if any(u_data['email'] == new_email for u_data in users.values() if u_data['username'] != username):
+                flash('Este email ya está en uso por otra cuenta.', 'error')
+                return render_template('user_edit_profile.html', user=user)
+            user['email'] = new_email
 
-        user['email'] = new_email if new_email else user['email'] # Actualizar solo si se proporciona
-        user['delivery_address'] = new_delivery_address # Siempre actualizar la dirección (puede ser vacía)
+        user['delivery_address'] = new_delivery_address
 
-        if save_users(users):
-            flash('¡Perfil actualizado exitosamente!', 'success')
-            return redirect(url_for('user_auth.user_profile'))
-        else:
-            flash('Error al actualizar el perfil. Inténtalo de nuevo.', 'error')
+        # Cambio de contraseña
+        if new_password:
+            if not current_password or not check_password_hash(user['password'], current_password):
+                flash('Contraseña actual incorrecta.', 'error')
+                return render_template('user_edit_profile.html', user=user)
+            
+            if not is_valid_password(new_password):
+                flash('La nueva contraseña no cumple con los requisitos de seguridad.', 'error')
+                return render_template('user_edit_profile.html', user=user)
+            
+            user['password'] = generate_password_hash(new_password)
+            flash('Contraseña actualizada con éxito.', 'success')
+        
+        save_users(users)
+        flash('Perfil actualizado con éxito.', 'success')
+        # Actualizar email en sesión si ha cambiado
+        if 'user_email' in session and session['user_email'] != user['email']:
+            session['user_email'] = user['email']
+            
+        return redirect(url_for('user_auth.user_dashboard'))
 
     return render_template('user_edit_profile.html', user=user)
 
+@user_bp.route('/orders')
+@login_required
+def user_orders():
+    """Muestra el historial de pedidos del usuario."""
+    username = session.get('user_username')
+    all_orders = load_orders()
+    # Filtrar órdenes para el usuario actual y ordenar por fecha descendente
+    user_orders = [
+        order for order in all_orders.values() 
+        if order.get('username') == username
+    ]
+    user_orders_sorted = sorted(user_orders, key=lambda x: x.get('order_date', '0'), reverse=True)
+    # Obtener los chats agrupados por order_id
+    chats_por_pedido = get_user_chats_by_order(username)
+    return render_template('user_orders.html', orders=user_orders_sorted, chats_por_pedido=chats_por_pedido)
 
-@user_bp.route('/user/settings')
-@user_required
-def user_settings():
-    """
-    Muestra la página de configuración de la cuenta del usuario.
-    """
-    return render_template('user_settings.html')
+@user_bp.route('/notifications')
+@login_required
+def user_notifications():
+    """Muestra las notificaciones del usuario."""
+    username = session.get('user_username')
+    all_notifications = load_notifications()
+    
+    user_notifications_list = all_notifications.get(username, [])
+    
+    # Marcar todas las notificaciones como leídas cuando el usuario las ve
+    if username in all_notifications:
+        for notif in all_notifications[username]:
+            notif['read'] = True
+        save_notifications(all_notifications) # Guardar los cambios
+    
+    # Ordenar por fecha, las no leídas primero si se desea
+    sorted_notifications = sorted(user_notifications_list, 
+                                  key=lambda x: (x.get('read', False), x.get('timestamp', '0')), 
+                                  reverse=True) # Las no leídas (False) irán primero si se invierte
+                                                # Y luego por fecha descendente
+    
+    return render_template('user_notifications.html', notifications=sorted_notifications)
 
-@user_bp.route('/user/change_password', methods=['GET', 'POST'])
-@user_required
-def user_change_password():
-    """
-    Permite al usuario cambiar su contraseña.
-    """
-    username = session['user_username']
+@user_bp.route('/notifications/mark_read/<int:index>', methods=['POST'])
+@login_required
+def mark_notification_read(index):
+    username = session.get('user_username')
+    all_notifications = load_notifications()
+    
+    if username in all_notifications and 0 <= index < len(all_notifications[username]):
+        all_notifications[username][index]['read'] = True
+        save_notifications(all_notifications)
+        flash('Notificación marcada como leída.', 'success')
+    else:
+        flash('Notificación no encontrada.', 'error')
+        
+    return redirect(url_for('user_auth.user_notifications'))
+
+
+@user_bp.route('/privacy')
+@login_required
+def user_privacy():
+    """Muestra la página de política de privacidad y control de datos."""
+    username = session.get('user_username')
+    users = load_users()
+    user_data = users.get(username)
+    
+    return render_template('user_privacy.html', user_data=user_data)
+
+
+@user_bp.route('/privacy/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    """Permite al usuario eliminar su cuenta."""
+    username = session.get('user_username')
+    users = load_users()
+
+    if username in users:
+        del users[username]
+        save_users(users)
+        session.pop('user_logged_in', None)
+        session.pop('user_username', None)
+        session.pop('user_email', None)
+        flash('Tu cuenta ha sido eliminada permanentemente.', 'info')
+        return redirect(url_for('home'))
+    
+    flash('Error al intentar eliminar la cuenta.', 'error')
+    return redirect(url_for('user_auth.user_privacy'))
+
+@user_bp.route('/payment_methods', methods=['GET'])
+@login_required
+def user_payment_methods():
+    """Muestra los métodos de pago del usuario."""
+    username = session.get('user_username')
+    users = load_users()
+    user = users.get(username)
+    
+    if not user:
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('user_auth.user_dashboard'))
+
+    payment_methods = user.get('payment_methods', [])
+    return render_template('user_payment_methods.html', payment_methods=payment_methods)
+
+@user_bp.route('/payment_methods/add', methods=['GET', 'POST'])
+@login_required
+def add_payment_method():
+    """Permite al usuario añadir un nuevo método de pago."""
+    username = session.get('user_username')
     users = load_users()
     user = users.get(username)
 
     if not user:
-        flash('Error: No se encontró tu perfil de usuario.', 'error')
-        return redirect(url_for('user_auth.user_settings'))
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('user_auth.user_dashboard'))
 
     if request.method == 'POST':
-        current_password = request.form['current_password']
-        new_password = request.form['new_password']
-        confirm_new_password = request.form['confirm_new_password']
+        card_number = request.form.get('card_number', '').strip()
+        card_holder = request.form.get('card_holder', '').strip()
+        expiry_date = request.form.get('expiry_date', '').strip() # MM/AA
+        cvv = request.form.get('cvv', '').strip()
 
-        if not verify_password(user['password'], current_password):
-            flash('La contraseña actual es incorrecta.', 'error')
-        elif not (8 <= len(new_password) <= 20 and
-                  re.search(r'[a-z]', new_password) and
-                  re.search(r'[A-Z]', new_password) and
-                  re.search(r'[0-9]', new_password) and
-                  re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password)):
-            flash('La nueva contraseña debe tener entre 8 y 20 caracteres, e incluir mayúsculas, minúsculas, números y símbolos.', 'error')
-        elif new_password != confirm_new_password:
-            flash('La nueva contraseña y la confirmación no coinciden.', 'error')
+        # Validaciones básicas (puedes añadir más regex para número de tarjeta, CVV, etc.)
+        if not all([card_number, card_holder, expiry_date, cvv]):
+            flash('Todos los campos son obligatorios.', 'error')
+            return render_template('add_payment_method.html')
+
+        if not re.fullmatch(r'\d{16}', card_number):
+            flash('Número de tarjeta inválido (debe ser 16 dígitos).', 'error')
+            return render_template('add_payment_method.html', card_holder=card_holder, expiry_date=expiry_date)
+        
+        if not re.fullmatch(r'\d{3,4}', cvv):
+            flash('CVV inválido (3 o 4 dígitos).', 'error')
+            return render_template('add_payment_method.html', card_holder=card_holder, expiry_date=expiry_date, card_number=card_number)
+
+        # Aquí no se guardan datos sensibles directamente, solo una representación.
+        # En una aplicación real, se usaría un proveedor de pagos.
+        new_method = {
+            'id': secrets.token_hex(6), # ID único para el método de pago
+            'type': 'Tarjeta de Crédito/Débito',
+            'last_four': card_number[-4:],
+            'expiry_date': expiry_date,
+            'holder_name': card_holder,
+            'added_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        user_payment_methods = user.get('payment_methods', [])
+        user_payment_methods.append(new_method)
+        user['payment_methods'] = user_payment_methods
+        
+        if save_users(users):
+            flash('Método de pago añadido con éxito.', 'success')
+            return redirect(url_for('user_auth.user_payment_methods'))
         else:
-            user['password'] = hash_password(new_password)
-            if save_users(users):
-                flash('¡Contraseña actualizada exitosamente!', 'success')
-                return redirect(url_for('user_auth.user_settings'))
-            else:
-                flash('Error al guardar la nueva contraseña. Inténtalo de nuevo.', 'error')
+            flash('Error al añadir el método de pago.', 'error')
 
-    return render_template('user_change_password.html')
+    return render_template('add_payment_method.html')
 
-@user_bp.route('/user/notifications') 
-@user_required
-def user_notifications():
-    """
-    Muestra la página de notificaciones del usuario.
-    """
-    username = session['user_username']
-    all_notifications = load_notifications()
-    user_notifications = sorted(
-        [n for n in all_notifications if n['user_username'] == username],
-        key=lambda x: x['timestamp'],
-        reverse=True
-    )
-    return render_template('user_notifications.html', notifications=user_notifications)
+@user_bp.route('/payment_methods/delete/<method_id>', methods=['POST'])
+@login_required
+def delete_payment_method(method_id):
+    """Permite al usuario eliminar un método de pago existente."""
+    username = session.get('user_username')
+    users = load_users()
+    user = users.get(username)
 
-@user_bp.route('/user/notifications/mark_read/<int:notification_id>', methods=['POST']) 
-@user_required
-def mark_notification_read(notification_id):
-    """
-    Marca una notificación específica como leída.
-    """
-    notifications = load_notifications()
-    for notification in notifications:
-        if notification['id'] == notification_id and notification['user_username'] == session['user_username']:
-            notification['read'] = True
-            save_notifications(notifications)
-            return jsonify(success=True)
-    return jsonify(success=False, message="Notificación no encontrada o no autorizada"), 404
+    if not user:
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('user_auth.user_dashboard'))
 
-@user_bp.route('/user/notifications/delete/<int:notification_id>', methods=['POST']) 
-@user_required
-def delete_notification(notification_id):
-    """
-    Elimina una notificación específica.
-    """
-    notifications = load_notifications()
-    initial_count = len(notifications)
-    notifications = [n for n in notifications if not (n['id'] == notification_id and n['user_username'] == session['user_username'])]
-    
-    if len(notifications) < initial_count:
-        save_notifications(notifications)
-        return jsonify(success=True)
-    return jsonify(success=False, message="Notificación no encontrada o no autorizada"), 404
-
-@user_bp.route('/user/payment_methods')
-@user_required
-def user_payment_methods():
-    """
-    Muestra la página de métodos de pago del usuario.
-    """
-    username = session['user_username']
-    all_payment_methods = load_payment_methods()
-    user_payment_methods = [
-        method for method in all_payment_methods if method['user_username'] == username
-    ]
-    return render_template('user_payment_methods.html', payment_methods=user_payment_methods)
-
-@user_bp.route('/user/payment_methods/add', methods=['GET', 'POST'])
-@user_required
-def user_add_payment_method():
-    """
-    Maneja la adición de un nuevo método de pago (Nequi o Bancolombia).
-    """
-    if request.method == 'POST':
-        username = session['user_username']
-        method_type = request.form.get('method_type')
-        account_number = request.form.get('account_number')
-        account_holder = request.form.get('account_holder')
-
-        if not all([method_type, account_number, account_holder]):
-            flash('Por favor, completa todos los campos.', 'error')
-        elif method_type not in ['nequi', 'bancolombia']:
-            flash('Tipo de método de pago no válido.', 'error')
-        else:
-            all_payment_methods = load_payment_methods()
-            new_id = 1
-            if all_payment_methods:
-                new_id = max(m['id'] for m in all_payment_methods) + 1
-            
-            new_method = {
-                "id": new_id,
-                "user_username": username,
-                "type": method_type,
-                "account_number": account_number,
-                "account_holder": account_holder,
-                "added_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            all_payment_methods.append(new_method)
-            
-            if save_payment_methods(all_payment_methods):
-                flash(f'¡Cuenta de {method_type.capitalize()} agregada exitosamente!', 'success')
-                return redirect(url_for('user_auth.user_payment_methods'))
-            else:
-                flash('Error al agregar el método de pago. Inténtalo de nuevo.', 'error')
-
-    return render_template('user_add_payment_method.html')
-
-@user_bp.route('/user/payment_methods/delete/<int:method_id>', methods=['POST']) 
-@user_required
-def user_delete_payment_method(method_id):
-    """
-    Elimina un método de pago.
-    """
-    username = session['user_username']
-    all_payment_methods = load_payment_methods()
-    
-    initial_count = len(all_payment_methods)
-    all_payment_methods = [
-        m for m in all_payment_methods if not (m['id'] == method_id and m['user_username'] == username)
+    updated_payment_methods = [
+        method for method in user.get('payment_methods', []) 
+        if method['id'] != method_id
     ]
 
-    if len(all_payment_methods) < initial_count: 
-        if save_payment_methods(all_payment_methods):
-            flash('Método de pago eliminado exitosamente.', 'info')
-            return jsonify(success=True)
+    if len(updated_payment_methods) < len(user.get('payment_methods', [])):
+        user['payment_methods'] = updated_payment_methods
+        if save_users(users):
+            flash('Método de pago eliminado con éxito.', 'success')
         else:
             flash('Error al eliminar el método de pago.', 'error')
-            return jsonify(success=False), 500
     else:
-        flash('Método de pago no encontrado o no autorizado.', 'error')
-        return jsonify(success=False), 404
+        flash('Método de pago no encontrado o no autorizado para eliminar.', 'error')
+    
+    return redirect(url_for('user_auth.user_payment_methods'))
 
-@user_bp.route('/user/orders') 
-@user_required
-def user_orders():
-    """
-    Muestra la página de pedidos del usuario.
-    """
-    username = session['user_username']
-    all_orders = load_orders() 
-    user_orders_list = sorted(
-        [order for order in all_orders if order.get('user_username') == username],
-        key=lambda x: x.get('timestamp', ''), 
-        reverse=True
-    )
-    return render_template('user_orders.html', orders=user_orders_list)
 
-@user_bp.route('/user/privacy')
-@user_required
-def user_privacy():
-    """
-    Muestra la página de privacidad del usuario.
-    """
-    return render_template('user_privacy.html')
+@user_bp.route('/logout')
+def logout():
+    """Cierra la sesión del usuario."""
+    session.pop('user_logged_in', None)
+    session.pop('user_username', None)
+    session.pop('user_email', None)
+    flash('Has cerrado sesión.', 'info')
+    return redirect(url_for('home'))
+
+@user_bp.route('/get_unread_notifications_count')
+@login_required
+def get_unread_notifications_count():
+    """Devuelve el número de notificaciones no leídas para el usuario."""
+    username = session.get('user_username')
+    all_notifications = load_notifications()
+    user_notifications = all_notifications.get(username, [])
+    unread_count = sum(1 for notif in user_notifications if not notif.get('read', False))
+    return jsonify(count=unread_count)
+
+@user_bp.route('/orders/delete/<order_id>', methods=['POST'])
+@login_required
+def delete_order(order_id):
+    """Permite al usuario cancelar/borrar un pedido propio si es suyo y está pendiente."""
+    username = session.get('user_username')
+    orders = load_orders()
+    order = orders.get(order_id)
+    if not order or order.get('username') != username:
+        flash('No tienes permiso para cancelar este pedido.', 'error')
+        return redirect(url_for('user_auth.user_orders'))
+    if order.get('status') != 'pending':
+        flash('Solo puedes cancelar pedidos pendientes.', 'warning')
+        return redirect(url_for('user_auth.user_orders'))
+    # Eliminar el pedido
+    del orders[order_id]
+    save_orders(orders)
+    # Eliminar de user_purchases.json si existe
+    try:
+        from app import load_user_purchases, save_user_purchases
+        purchases = load_user_purchases()
+        purchases = [p for p in purchases if p.get('order_id') != order_id]
+        save_user_purchases(purchases)
+    except Exception:
+        pass
+    flash('Pedido cancelado correctamente.', 'success')
+    return redirect(url_for('user_auth.user_orders'))
+
+# --- RUTAS DE ADMINISTRACIÓN (ejemplo básico) ---
+# Si estas rutas estaban aquí, deberían estar en un blueprint de administrador separado.
+# Por el momento, asegúrate de que no haya duplicidad si ya tienes admin_users.py
+# @user_bp.route('/admin')
+# @admin_required
+# def admin_panel():
+#    return render_template('admin_panel.html')

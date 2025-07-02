@@ -62,14 +62,5 @@
     "message": "Gracias por tu compra por un total de $480000.00. Tu pedido está en procesamiento.",
     "timestamp": "2025-06-16 17:08:21",
     "read": false
-  },
-  {
-    "id": 8,
-    "user_username": "usuario1",
-    "type": "compra",
-    "title": "¡Tu compra ha sido confirmada!",
-    "message": "Gracias por tu compra por un total de $960000.00. Tu pedido está en procesamiento y será enviado a: calle 43 #56-64 apt301.",
-    "timestamp": "2025-06-16 17:24:51",
-    "read": false
   }
 ]

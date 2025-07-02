@@ -21,12 +21,20 @@
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
                    minlength="8" maxlength="20" title="Debe tener entre 8 y 20 caracteres, e incluir mayúsculas, minúsculas, números y símbolos.">
         </div>
+        <!-- CAMBIO: Añadido el campo para confirmar contraseña -->
+        <div class="mb-6">
+            <label for="confirm_password" class="block text-gray-700 text-sm font-bold mb-2">Confirmar Contraseña:</label>
+            <input type="password" id="confirm_password" name="confirm_password" required
+                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+                   minlength="8" maxlength="20" title="Debe coincidir con la contraseña ingresada.">
+        </div>
+        <!-- FIN DEL CAMBIO -->
         <div class="flex items-center justify-between">
             <button type="submit"
                     class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition shadow-md">
                 Registrarse <i class="fas fa-user-plus ml-2"></i>
             </button>
-            <a href="{{ url_for('user_auth.user_login') }}" class="inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition">
+            <a href="{{ url_for('user_auth.login') }}" class="inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition">
                 ¿Ya tienes cuenta? Inicia sesión
             </a>
         </div>

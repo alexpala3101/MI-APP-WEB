@@ -1,40 +1,84 @@
-{# user_settings.html (Ejemplo de cómo debería verse después de la modificación) #}
+{# user_settings.html #}
 {% extends "base.html" %}
 {% block title %}Configuración de Cuenta - Marketplace{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto px-4 py-8 bg-white rounded-lg shadow-lg mt-8">
-    <div class="header text-center mb-8 bg-green-100 p-6 rounded-lg">
-        <h1 class="text-3xl font-bold text-green-800 mb-2">⚙️ Configuración de Cuenta</h1>
-        <p class="text-xl text-green-600">Gestiona tus preferencias y seguridad.</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <a href="{{ url_for('user_auth.user_edit_profile') }}" class="flex items-center p-4 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition transform hover:scale-105">
-            <i class="fas fa-user-edit mr-3 text-xl"></i>
-            <span class="font-semibold text-lg">Editar Perfil y Dirección</span>
-        </a>
-        <a href="{{ url_for('user_auth.user_change_password') }}" class="flex items-center p-4 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 transition transform hover:scale-105">
-            <i class="fas fa-key mr-3 text-xl"></i>
-            <span class="font-semibold text-lg">Cambiar Contraseña</span>
-        </a>
-        {# ELIMINAR CUALQUIER ENLACE SIMILAR A ESTO: #}
-        {#
-        <a href="{{ url_for('user_auth.user_payment_methods') }}" class="flex items-center p-4 bg-purple-500 text-white rounded-lg shadow-md hover:bg-purple-600 transition transform hover:scale-105">
-            <i class="fas fa-credit-card mr-3 text-xl"></i>
-            <span class="font-semibold text-lg">Métodos de Pago</span>
-        </a>
-        #}
-        <a href="{{ url_for('user_auth.user_privacy') }}" class="flex items-center p-4 bg-indigo-500 text-white rounded-lg shadow-md hover:bg-indigo-600 transition transform hover:scale-105">
-            <i class="fas fa-shield-alt mr-3 text-xl"></i>
-            <span class="font-semibold text-lg">Configuración de Privacidad</span>
-        </a>
-        {# Si tienes un botón de eliminar cuenta, también podría ir aquí #}
-    </div>
-
-    <div class="text-center mt-8">
-        <a href="{{ url_for('user_auth.user_dashboard') }}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-gray-800 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition">
-            <i class="fas fa-arrow-left mr-2"></i> Volver al Panel
-        </a>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user_dashboard.css') }}">
+<style>
+.user-settings-glass {
+    background: rgba(255,255,255,0.55);
+    box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+    border-radius: 2rem;
+    border: 1.5px solid rgba(200,200,255,0.22);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    transition: box-shadow 0.2s;
+}
+.user-settings-header {
+    background: linear-gradient(90deg, #d1fae5 0%, #f0fdf4 100%);
+    border-radius: 1.2rem;
+    box-shadow: 0 2px 8px 0 rgba(16,185,129,0.08);
+}
+.user-settings-btn {
+    font-weight: 700;
+    border-radius: 1rem;
+    box-shadow: 0 2px 12px 0 rgba(31, 38, 135, 0.10);
+    transition: all 0.18s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    letter-spacing: 0.01em;
+    padding: 1rem 1.2rem;
+    font-size: 1.1rem;
+    border: none;
+    outline: none;
+    opacity: 0.97;
+}
+.user-settings-btn:hover {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 6px 24px 0 rgba(31, 38, 135, 0.13);
+}
+.user-settings-back {
+    background: rgba(243,244,246,0.95);
+    border-radius: 0.7rem;
+    box-shadow: 0 1px 4px 0 rgba(31, 38, 135, 0.07);
+    font-weight: 600;
+    color: #374151;
+    transition: background 0.18s;
+}
+.user-settings-back:hover {
+    background: #e5e7eb;
+}
+</style>
+<div class="user-dashboard-bg min-h-screen flex items-center justify-center py-8">
+    <div class="user-settings-glass p-8 max-w-md w-full mt-8">
+        <div class="user-settings-header text-center mb-8 p-6">
+            <h1 class="text-3xl font-bold text-green-800 mb-2 flex items-center justify-center gap-2">
+                <i class="fas fa-cog"></i> Configuración de Cuenta
+            </h1>
+            <p class="text-xl text-green-600">Gestiona tus preferencias y seguridad.</p>
+        </div>
+        <div class="grid grid-cols-1 gap-5">
+            <a href="{{ url_for('user_auth.user_edit_profile') }}" class="user-settings-btn bg-blue-500 text-white hover:bg-blue-600">
+                <i class="fas fa-user-edit text-xl"></i>
+                <span>Editar Perfil y Dirección</span>
+            </a>
+            <a href="{{ url_for('user_auth.user_change_password') }}" class="user-settings-btn bg-indigo-400 text-white hover:bg-indigo-500">
+                <i class="fas fa-key text-xl"></i>
+                <span>Cambiar Contraseña</span>
+            </a>
+            <a href="{{ url_for('user_auth.user_privacy') }}" class="user-settings-btn bg-indigo-500 text-white hover:bg-indigo-600">
+                <i class="fas fa-shield-alt text-xl"></i>
+                <span>Configuración de Privacidad</span>
+            </a>
+        </div>
+        <div class="text-center mt-8">
+            <a href="{{ url_for('user_auth.user_dashboard') }}" class="user-settings-back inline-flex items-center px-6 py-3 text-base font-medium shadow-sm">
+                <i class="fas fa-arrow-left mr-2"></i> Volver al Panel
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

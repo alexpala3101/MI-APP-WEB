@@ -1,5 +1,5 @@
-[
-  {
+{
+  "1": {
     "id": 1,
     "name": "Tableros electronicos P10",
     "price": 330000.0,
@@ -8,7 +8,7 @@
     "stock": 5,
     "image_url": "https://www.proyectoselectronicoss.com/wp-content/uploads/2020/04/Modulo-matriz-led-RGB-P10.png"
   },
-  {
+  "2": {
     "id": 2,
     "name": "Tableros electronicos RGB",
     "price": 480000.0,
@@ -17,7 +17,7 @@
     "stock": 3,
     "image_url": "https://electronilab.co/wp-content/uploads/2014/06/PanelRGB32x32_Electronilab_5.jpg"
   },
-  {
+  "3": {
     "id": 3,
     "name": "Diseños Neos Personalizados",
     "price": 50000.0,
@@ -26,7 +26,7 @@
     "stock": 5,
     "image_url": "https://tarjetasdepresentacionbogota.co/wp-content/uploads/2021/06/letrero-monster-neonflex-768x1024.jpg"
   },
-  {
+  "4": {
     "id": 4,
     "name": "Pantallas Para Imagenes Y Video",
     "price": 1500000.0,
@@ -36,12 +36,31 @@
     "stock": 6,
     "image_url": "https://es.huasuny.com/uploadfile/202101/20/2070a58080071376df30d5c740f4f50c_medium.jpg"
   },
-  {
+  "5": {
     "id": 5,
-    "name": "luces led ",
-    "description": "compra tus luces led RGB",
-    "price": 45.0,
-    "stock": 5,
-    "image_url": "https://cinelight.com/img/cms/POZE%20BLOG/RGB%20Lighting/RGBWW_LED_SMD_Strip.jpg"
+    "name": "Luces led RGB",
+    "description": "Las mejores luces para que decores lo que quieras ",
+    "price": 45000.0,
+    "stock": 4,
+    "image_url": "https://www.wedooled.com/479-large_default/potente-tira-de-leds-multicolor-con-efectos-dinamicos-144-leds-m-1-led-pixel.jpg",
+    "category": "tira led"
+  },
+  "6": {
+    "id": 6,
+    "name": "pan",
+    "description": "dsadsasd",
+    "price": 3234.0,
+    "stock": 2,
+    "image_url": "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.exito.com%2Fcinta-luz-led-multicolor-5m-rgb-bluetooth-control-ritmico-101880232-mp%2Fp&psig=AOvVaw0aNyxRJj8EI1J0CLh68F7V&ust=1750862950248000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCLDfj_Smio4DFQAAAAAdAAAAABAE",
+    "category": "comida"
+  },
+  "7": {
+    "id": 7,
+    "name": "dgd",
+    "description": "rtwerw",
+    "price": 33232.0,
+    "stock": 232,
+    "image_url": "",
+    "category": "comida"
   }
-]
+}

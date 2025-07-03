@@ -4,6 +4,7 @@ import json
 import os
 from functools import wraps
 from datetime import datetime
+from flask_wtf import CSRFProtect
 
 # Importar load_orders desde app.py (asumiendo que app.py la define y la carga)
 try:
@@ -36,7 +37,7 @@ except ImportError:
 admin_products_bp = Blueprint('admin_products', __name__)
 
 # Archivo simulado de base de datos de productos
-PRODUCTS_FILE = 'products.json' # Definido aquí para que las funciones locales puedan usarlo, si no se importa de app.py
+PRODUCTS_FILE = 'data/products.json' # Usar la misma ruta que data_manager.py
 
 def admin_required(f):
     """
@@ -54,13 +55,13 @@ def admin_required(f):
 def load_products_local(): # Renombrada para evitar conflicto si se importa de app
     """Carga los productos desde el archivo JSON."""
     if not os.path.exists(PRODUCTS_FILE):
-        return []
+        return {}
     try:
         with open(PRODUCTS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except (json.JSONDecodeError, IOError) as e:
         print(f"Error al cargar los productos: {e}")
-        return []
+        return {}
 
 def save_products(products):
     """Guarda los productos en el archivo JSON."""
@@ -100,9 +101,14 @@ PRODUCT_FORM_TEMPLATE = """
             <input type="number" id="stock" name="stock" value="{{ product.stock | default(0) }}" required
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
         </div>
-        <div class="mb-6">
+        <div class="mb-4">
             <label for="image_url" class="block text-gray-700 text-sm font-bold mb-2">URL de la Imagen:</label>
             <input type="url" id="image_url" name="image_url" value="{{ product.image_url | default('') }}"
+                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        </div>
+        <div class="mb-6">
+            <label for="category" class="block text-gray-700 text-sm font-bold mb-2">Categoría:</label>
+            <input type="text" id="category" name="category" value="{{ product.category | default('') }}"
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
         </div>
         <div class="flex items-center justify-between">
@@ -125,7 +131,10 @@ def manage_products():
     """
     Muestra una lista de todos los productos y permite acciones de gestión.
     """
-    products = load_products_local() # Usa la función local o importada
+    products = load_products_local()
+    # Convertir lista a dict si es necesario (migración)
+    if isinstance(products, list):
+        products = {str(p['id']): p for p in products}
     return render_template_string("""
 {% extends "base.html" %}
 {% block title %}Gestión de Productos{% endblock %}
@@ -163,7 +172,7 @@ def manage_products():
                 </tr>
             </thead>
             <tbody>
-                {% for product in products %}
+                {% for product in products.values() %}
                 <tr class="hover:bg-gray-50 border-b border-gray-200">
                     <td class="px-5 py-5 text-sm text-gray-900">{{ product.id }}</td>
                     <td class="px-5 py-5 text-sm text-gray-900">
@@ -200,7 +209,7 @@ def manage_products():
     
     <div class="text-center mt-8">
         <a href="{{ url_for('admin_dashboard') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition shadow-md">
-            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+            <i class="fas fa-arrow-left mr-2"></i>Volver al Panel 
         </a>
     </div>
 </div>
@@ -216,17 +225,21 @@ def add_product():
     """
     if request.method == 'POST':
         products = load_products_local()
+        # Convertir lista a dict si es necesario (migración)
+        if isinstance(products, list):
+            products_dict = {str(p['id']): p for p in products}
+        else:
+            products_dict = products
         new_id = 1
-        if products:
-            new_id = max(p['id'] for p in products) + 1
-
+        if products_dict:
+            new_id = max([int(pid) for pid in products_dict.keys()]) + 1
         try:
             name = request.form['name']
             description = request.form['description']
             price = float(request.form['price'])
             stock = int(request.form['stock'])
-            image_url = request.form.get('image_url', '') # Permitir URL vacía, usar default en template
-
+            image_url = request.form.get('image_url', '')
+            category = request.form.get('category', 'Sin categoría')
             if not name or not description or price <= 0 or stock < 0:
                 flash('Todos los campos son requeridos y los valores deben ser válidos.', 'error')
             else:
@@ -236,17 +249,17 @@ def add_product():
                     'description': description,
                     'price': price,
                     'stock': stock,
-                    'image_url': image_url
+                    'image_url': image_url,
+                    'category': category
                 }
-                products.append(new_product)
-                if save_products(products):
+                products_dict[str(new_id)] = new_product
+                if save_products(products_dict):
                     flash('¡Producto añadido exitosamente!', 'success')
                     return redirect(url_for('admin_products.manage_products'))
                 else:
                     flash('Error al guardar el producto.', 'error')
         except ValueError:
             flash('Por favor, introduce valores numéricos válidos para precio y stock.', 'error')
-        
     return render_template_string(PRODUCT_FORM_TEMPLATE, title="Añadir Nuevo Producto", product={})
 
 @admin_products_bp.route('/admin/products/edit/<int:product_id>', methods=['GET', 'POST'])
@@ -256,12 +269,14 @@ def edit_product(product_id):
     Maneja la edición de un producto existente.
     """
     products = load_products_local()
-    product = next((p for p in products if p['id'] == product_id), None)
-
+    # Convertir lista a dict si es necesario
+    if isinstance(products, list):
+        products = {str(p['id']): p for p in products}
+    pid = str(product_id)
+    product = products.get(pid)
     if not product:
         flash('Producto no encontrado.', 'error')
         return redirect(url_for('admin_products.manage_products'))
-
     if request.method == 'POST':
         try:
             product['name'] = request.form['name']
@@ -269,7 +284,7 @@ def edit_product(product_id):
             product['price'] = float(request.form['price'])
             product['stock'] = int(request.form['stock'])
             product['image_url'] = request.form.get('image_url', '')
-
+            product['category'] = request.form.get('category', 'Sin categoría')
             if not product['name'] or not product['description'] or product['price'] <= 0 or product['stock'] < 0:
                 flash('Todos los campos son requeridos y los valores deben ser válidos.', 'error')
             else:
@@ -280,7 +295,6 @@ def edit_product(product_id):
                     flash('Error al actualizar el producto.', 'error')
         except ValueError:
             flash('Por favor, introduce valores numéricos válidos para precio y stock.', 'error')
-            
     return render_template_string(PRODUCT_FORM_TEMPLATE, title="Editar Producto", product=product)
 
 @admin_products_bp.route('/admin/products/delete/<int:product_id>', methods=['POST'])
@@ -290,17 +304,18 @@ def delete_product(product_id):
     Maneja la eliminación de un producto.
     """
     products = load_products_local()
-    initial_count = len(products)
-    products = [p for p in products if p['id'] != product_id]
-    
-    if len(products) < initial_count:
+    # Convertir lista a dict si es necesario
+    if isinstance(products, list):
+        products = {str(p['id']): p for p in products}
+    pid = str(product_id)
+    if pid in products:
+        del products[pid]
         if save_products(products):
             flash('¡Producto eliminado exitosamente!', 'success')
         else:
             flash('Error al eliminar el producto.', 'error')
     else:
-        flash('No se pudo eliminar el producto porque no fue encontrado.', 'error')
-
+        flash('Producto no encontrado.', 'error')
     return redirect(url_for('admin_products.manage_products'))
 
 @admin_products_bp.route('/admin/orders') # NUEVA RUTA

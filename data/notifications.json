@@ -7,5 +7,15 @@
             "timestamp": "2025-07-01 16:50:47",
             "read": false
         }
+    ],
+    "usuario1": [
+        {
+            "id": "f20e91d3",
+            "message": "!LLEVA TUS MEJORES DESCUENTOS HOY\u00a1",
+            "type": "oferta",
+            "timestamp": "2025-07-03 12:13:20",
+            "read": true,
+            "title": "!DESCUENTOS\u00a1"
+        }
     ]
 }

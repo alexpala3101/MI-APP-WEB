@@ -2,32 +2,26 @@
     "admin": {
         "username": "admin",
         "email": "admin@marketplace.com",
-        "password": "pbkdf2:sha256:600000$rHXKu5iycm2qmbj2$5e436509f75baef8df0b6658b302c3017932ad4a31603963c3a5e6dfbeec6f1f",
+        "password": "pbkdf2:sha256:600000$byssdidOuAWgjLR0$70e61c802466c10128b9fd85ddf18871f949f53e933f384dd973787fa4218238",
         "role": "admin",
-        "registration_date": "2025-07-02 13:08:02",
+        "registration_date": "2025-07-03 12:16:32",
         "last_login": null,
         "is_active": true
     },
     "usuario1": {
         "username": "usuario1",
         "email": "usuario1@gmail.com",
-        "password": "pbkdf2:sha256:600000$1J0CMMBykvt293Nb$0c4ed7b259319b0ad87e7270fbee6d6924e16928ef2d3d35fc7f8edba06a8a74",
+        "full_name": "texter texter",
+        "phone": "3052478605",
+        "birthdate": "2004-01-31",
+        "gender": "M",
+        "password": "pbkdf2:sha256:600000$FHWI1NT0BmVoulTw$c5d1fac0cacb8ff0815f57e3d985041fb684b11f2499ee6319903454d4ed7d08",
         "role": "user",
-        "registration_date": "2025-07-02 10:14:19",
-        "last_login": "2025-07-02 12:51:28",
+        "registration_date": "2025-07-02 17:30:20",
+        "last_login": "2025-07-03 12:16:54",
         "is_active": true,
         "delivery_address": "",
-        "payment_methods": []
-    },
-    "usuario2": {
-        "username": "usuario2",
-        "email": "usuario2@gmail.com",
-        "password": "pbkdf2:sha256:600000$pvdwBIgDfuo1ZPrr$7d63b089275b56d18fd86ee9b714bb5179b3040a9da5c8fdd7010d6156beadff",
-        "role": "user",
-        "registration_date": "2025-07-02 13:09:00",
-        "last_login": "2025-07-02 13:09:17",
-        "is_active": true,
-        "delivery_address": "",
-        "payment_methods": []
+        "payment_methods": [],
+        "notifications_enabled": true
     }
 }

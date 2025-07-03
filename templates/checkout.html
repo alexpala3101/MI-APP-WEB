@@ -33,18 +33,9 @@
     </div>
 
     <form method="POST" action="{{ url_for('checkout') }}" class="bg-white rounded-lg shadow-lg p-6">
-        <h2 class="text-2xl font-semibold mb-6 text-gray-800 flex items-center"><i class="fas fa-map-marker-alt mr-3 text-blue-600"></i> Dirección de Entrega</h2>
-        <div class="mb-6">
-            <label for="delivery_address" class="block text-gray-700 text-sm font-bold mb-2">
-                Dirección Completa:
-            </label>
-            <input type="text" id="delivery_address" name="delivery_address" 
-                   value="{{ user.delivery_address | default('') }}" 
-                   class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500" 
-                   placeholder="Ej: Calle 10 # 20-30, Apto 4A, Ciudad, País" required>
-            <p class="text-gray-500 text-xs italic mt-1">Por favor, confirma o actualiza tu dirección de entrega.</p>
-        </div>
-
+        {{ csrf_token() }}
+        <h2 class="text-2xl font-semibold mb-6 text-gray-800 flex items-center"><i class="fas fa-map-marker-alt mr-3 text-blue-600"></i> Método de Pago</h2>
+        
         {# NUEVA SECCIÓN PARA EL CHAT DIRECTO / CONTACTO #}
         <div class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-6 rounded-lg" role="alert">
             <p class="font-bold text-lg mb-2 flex items-center"><i class="fas fa-comments mr-2"></i> Método de Pago: Chat Directo</p>

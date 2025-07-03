@@ -1,21 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Perfil de Usuario{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto px-4 py-8 bg-white rounded-lg shadow-lg mt-8">
-    <div class="header text-center mb-8 bg-blue-100 p-6 rounded-lg">
-        <h1 class="text-3xl font-bold text-blue-800 mb-2">Perfil de Usuario</h1>
-        <p class="text-xl text-blue-600">Detalles de tu cuenta</p>
-    </div>
-    <div class="profile-info bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8">
-        <p class="text-gray-700 mb-3 text-lg"><strong>Usuario:</strong> <span class="font-medium text-gray-900">{{ user.username }}</span></p>
-        <p class="text-gray-700 mb-3 text-lg"><strong>Email:</strong> <span class="font-medium text-gray-900">{{ user.email }}</span></p>
-        <p class="text-gray-700 text-lg"><strong>Miembro desde:</strong> <span class="font-medium text-gray-900">{{ user.registration_date }}</span></p>
-        {# Agrega más detalles del perfil aquí si expandes los datos del usuario #}
-    </div>
-    <div class="text-center">
-        <a href="{{ url_for('user_auth.user_dashboard') }}" class="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition shadow-md">
-            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
-        </a>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user_dashboard.css') }}">
+<div class="user-profile-bg min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200">
+    <div class="glass-card p-8 max-w-lg md:max-w-2xl w-full rounded-3xl shadow-2xl backdrop-blur-md bg-white/40 border border-white/30">
+        <div class="flex flex-col items-center gap-4">
+            <div class="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-tr from-pink-400 to-blue-400 flex items-center justify-center">
+                <img src="https://ui-avatars.com/api/?name={{ user.full_name|default(user.username|default('U')) }}&background=6C63FF&color=fff&size=128" alt="Avatar" class="w-full h-full object-cover">
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800">{{ user.full_name or user.username }}</h2>
+            <p class="text-gray-600 text-sm"><i class="fas fa-user mr-2"></i>{{ user.username }}</p>
+            <p class="text-gray-600 text-sm"><i class="fas fa-envelope mr-2"></i>{{ user.email }}</p>
+            <p class="text-gray-600 text-sm"><i class="fas fa-calendar-alt mr-2"></i>Miembro desde: {{ user.registration_date }}</p>
+            <p class="text-gray-600 text-sm"><i class="fas fa-phone mr-2"></i>{{ user.phone or 'Sin teléfono' }}</p>
+            <p class="text-gray-600 text-sm"><i class="fas fa-birthday-cake mr-2"></i>{{ user.birthdate or 'Sin fecha de nacimiento' }}</p>
+            <p class="text-gray-600 text-sm"><i class="fas fa-venus-mars mr-2"></i>{{ user.gender or 'Sin género' }}</p>
+            <!-- Eliminar visualización de dirección de entrega -->
+        </div>
+        <div class="mt-8">
+            <h3 class="text-lg font-bold text-gray-700 mb-2">Acceso rápido</h3>
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ url_for('user_auth.user_orders') }}" class="btn-glass px-4 py-2 rounded-lg text-pink-700 font-semibold flex items-center gap-2"><i class="fas fa-box"></i> Mis Pedidos</a>
+                <a href="{{ url_for('user_auth.user_notifications') }}" class="btn-glass px-4 py-2 rounded-lg text-yellow-700 font-semibold flex items-center gap-2"><i class="fas fa-bell"></i> Notificaciones</a>
+                <a href="{{ url_for('cart') }}" class="btn-glass px-4 py-2 rounded-lg text-indigo-700 font-semibold flex items-center gap-2"><i class="fas fa-shopping-cart"></i> Mi Carrito</a>
+            </div>
+        </div>
     </div>
 </div>
+<style>
+.user-profile-bg { min-height: 100vh; }
+.glass-card {
+    background: rgba(255,255,255,0.4);
+    box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18);
+    border-radius: 2rem;
+}
+</style>
 {% endblock %}

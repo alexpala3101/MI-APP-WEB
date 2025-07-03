@@ -32,6 +32,42 @@
       "from": "user",
       "text": "ds",
       "timestamp": "2025-07-02 11:27:38"
+    },
+    {
+      "from": "user",
+      "text": "fd",
+      "timestamp": "2025-07-02 15:38:02"
+    },
+    {
+      "from": "user",
+      "text": "compra\nTamaño solicitado: 21 m x 32 m",
+      "timestamp": "2025-07-02 15:40:55",
+      "image_url": "/static/uploads/usuario1_20250702154055_tablero_led.png",
+      "order_id": "d8f3c08494ba8f39"
+    },
+    {
+      "from": "user",
+      "text": "da\nTamaño solicitado: 12 m x 21 m",
+      "timestamp": "2025-07-03 09:35:50",
+      "order_id": "43d94e594ccb873a"
+    },
+    {
+      "from": "admin",
+      "text": "sa",
+      "timestamp": "2025-07-03 11:33:04"
+    },
+    {
+      "from": "user",
+      "text": "cuadro\nTamaño solicitado: 60 cm x 45 cm",
+      "timestamp": "2025-07-03 11:35:17",
+      "order_id": "13e5c55f138b558a"
+    },
+    {
+      "from": "user",
+      "text": "crea mi diseño\nTamaño solicitado: 21 cm x 32 cm",
+      "timestamp": "2025-07-03 11:45:34",
+      "image_url": "/static/uploads/usuario1_20250703114534_tablero_led.png",
+      "order_id": "c81a9f43cfd43017"
     }
   ],
   "usuario2": [
@@ -55,6 +91,11 @@
       "from": "user",
       "text": "😎",
       "timestamp": "2025-07-02 13:15:53"
+    },
+    {
+      "from": "admin",
+      "text": "dw",
+      "timestamp": "2025-07-03 11:34:27"
     }
   ]
 }

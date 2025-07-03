@@ -1,24 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="bg-white p-6 rounded-lg shadow-md mb-8 mt-8 max-w-2xl mx-auto">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-        <i class="fas fa-comments mr-3 text-blue-500"></i>Chats de Usuarios
-    </h2>
-    {% if user_list %}
-    <ul class="divide-y divide-gray-200">
-        {% for username in user_list %}
-        <li class="py-3 flex items-center justify-between">
-            <span class="font-semibold text-gray-700">
-                <i class="fas fa-user-circle text-blue-400 mr-2"></i>{{ username }}
-            </span>
-            <a href="{{ url_for('admin_user_chat', username=username) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold flex items-center">
-                <i class="fas fa-comments mr-2"></i>Ver Chat
-            </a>
-        </li>
-        {% endfor %}
-    </ul>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_user_chats.css') }}">
+<div class="admin-user-chats-card mt-5">
+  <h2><i class="bi bi-people text-primary"></i> Chats de Usuarios</h2>
+  <div class="admin-user-chats-list">
+    {% for username in user_list %}
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+        <div>
+          <i class="bi bi-person-circle text-primary"></i> {{ username }}
+        </div>
+        <a href="{{ url_for('admin_user_chat', username=username) }}" class="btn btn-primary btn-sm" style="min-width: 120px;">
+          Ingresar al chat
+        </a>
+      </div>
+      {% if not loop.last %}<hr>{% endif %}
     {% else %}
-    <div class="text-gray-500 text-center py-6">No hay chats de usuarios aún.</div>
-    {% endif %}
+      <div class="text-muted text-center">No hay chats de usuarios.</div>
+    {% endfor %}
+  </div>
+  <div style="text-align: right; margin-top: 2.5rem;">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary" style="font-weight:600; min-width:110px;">&larr; Atrás</a>
+  </div>
 </div>
 {% endblock %}

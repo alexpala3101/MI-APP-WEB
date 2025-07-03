@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Mis Pedidos - Marketplace{% endblock %}
 {% block content %}
+<div class="user-dashboard-bg min-h-screen">
 <div class="max-w-4xl mx-auto px-4 py-8">
     <div class="flex flex-col sm:flex-row justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">📦 Mis Pedidos</h1>
         <a href="{{ url_for('user_auth.user_dashboard') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
-            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+            <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
         </a>
     </div>
 
@@ -34,10 +35,6 @@
                     </form>
                     {% endif %}
                 </div>
-            </div>
-            <div class="mb-4 text-gray-700">
-                <p class="font-semibold">Dirección de Entrega:</p>
-                <p>{{ order.delivery_address | default('No especificada') }}</p>
             </div>
             <h3 class="text-lg font-medium text-gray-800 mb-3">Artículos del Pedido:</h3>
             <div class="divide-y divide-gray-100">
@@ -93,4 +90,7 @@
     </div>
     {% endif %}
 </div>
+</div>
 {% endblock %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user_dashboard.css') }}">

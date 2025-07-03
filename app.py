@@ -1,5 +1,5 @@
 # app.py - Main Flask Application with Enhanced Features
-from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import json
@@ -16,8 +16,8 @@ import re
 from data_manager import (
     load_products, save_products, load_orders, save_orders,
     load_reports, save_reports, load_users, save_users,
-    load_notifications, save_notifications, load_payment_methods,
-    save_payment_methods, load_user_carts, save_user_carts,
+    load_notifications, save_notifications, load_user_carts, save_user_carts,
+    load_user_purchases, save_user_purchases,  # <-- Agregado aquí
     # ADMIN_FILE eliminado porque no existe en data_manager.py
     # Estas funciones se importan ahora DIRECTAMENTE desde data_manager.py
     add_notification, get_cart, add_to_cart, remove_from_cart, update_cart_quantity,
@@ -30,6 +30,7 @@ from data_manager_chat import add_chat_message, get_user_chat, get_all_user_chat
 from user_auth import user_bp, login_required
 from admin_products import admin_products_bp
 from admin_users import admin_users_bp
+from admin_forms import AdminLoginForm
 
 # Configuración básica del logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -48,6 +49,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7) # Cambiado a 7 día
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 
 # Registrar Blueprints
 app.register_blueprint(user_bp)
@@ -214,15 +216,8 @@ def checkout():
             return redirect(url_for('cart'))
 
     if request.method == 'POST':
-        payment_method_id = request.form.get('payment_method')
-        delivery_address = request.form.get('delivery_address')
-
-        if not payment_method_id or not delivery_address:
-            flash('Por favor, selecciona un método de pago y proporciona una dirección de entrega.', 'error')
-            return render_template('checkout.html', cart_items=cart_items_details, total_price=total_price, payment_methods=current_user.get('payment_methods', []), user_address=current_user.get('delivery_address', ''))
-
-        # Proceso de pago simulado
-        # Aquí se integraría con una pasarela de pago real
+        # Eliminar referencia a delivery_address
+        # Proceso de pago simulado (sin métodos de pago)
         payment_successful = True # Simulación de pago exitoso
 
         if payment_successful:
@@ -237,10 +232,9 @@ def checkout():
                     'price': item['price']
                 } for item in cart_items_details],
                 'total_price': total_price,
-                'payment_method_id': payment_method_id,
-                'delivery_address': delivery_address,
+                'payment_method_id': 'default', # Valor fijo o eliminar si lo deseas
                 'order_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'status': 'pending' # O 'completed' si el pago es instantáneo
+                'status': 'pending'
             }
             orders[order_id] = new_order
             save_orders(orders)
@@ -252,8 +246,7 @@ def checkout():
                 'username': username,
                 'items': new_order['items'],
                 'total_price': total_price,
-                'payment_method_id': payment_method_id,
-                'delivery_address': delivery_address,
+                'payment_method_id': 'default',
                 'order_date': new_order['order_date'],
                 'status': new_order['status']
             })
@@ -272,18 +265,26 @@ def checkout():
 
             flash('¡Tu pedido ha sido realizado con éxito!', 'success')
             add_notification(username, f'Tu pedido #{order_id} ha sido confirmado. Total: ${total_price:.2f}', 'order_confirmation')
+            
+            # --- Mensaje de compra en el chat ---
+            for item in cart_items_details:
+                product_name = item['name']
+                product_image = item.get('image', '/static/images/default_product.png')
+                chat_text = f"¡Has comprado: {product_name}!"
+                # El mensaje tendrá tanto texto como imagen
+                add_chat_message(username, 'system', chat_text, image_url=product_image, order_id=order_id)
+            # --- Fin mensaje de compra en el chat ---
+
             return redirect(url_for('user_auth.user_orders'))
         else:
             flash('Error en el procesamiento del pago. Por favor, inténtalo de nuevo.', 'error')
 
     # Si es GET, o POST con error, renderiza la página de checkout
-    user_payment_methods = current_user.get('payment_methods', []) if current_user else []
     user_address = current_user.get('delivery_address', '') if current_user else ''
 
     return render_template('checkout.html', 
                            cart_items=cart_items_details, 
                            total_price=total_price,
-                           payment_methods=user_payment_methods,
                            user_address=user_address)
 
 @app.route('/products')
@@ -391,11 +392,12 @@ def admin_logout():
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     """Página de inicio de sesión para administradores."""
+    form = AdminLoginForm()
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
         users = load_users()
         admin = users.get('admin')
         if admin and username == 'admin' and check_password_hash(admin['password'], password):
@@ -405,7 +407,7 @@ def admin_login():
             return redirect(url_for('admin_dashboard'))
         else:
             flash('Credenciales incorrectas.', 'error')
-    return render_template('admin_login.html')
+    return render_template('admin_login.html', form=form)
 
 
 @app.route('/admin/user_purchases')
@@ -515,7 +517,6 @@ def contact_admin():
             ],
             'total_price': total_price,
             'payment_method_id': 'contact_admin',
-            'delivery_address': current_user.get('delivery_address', ''),
             'order_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'status': 'pending',
             'admin_message': message
@@ -524,7 +525,22 @@ def contact_admin():
         save_orders(orders)
         # Guardar mensaje en el chat (ahora con order_id)
         msg_text = f"{message}\nTamaño solicitado: {ancho} {ancho_unidad} x {largo} {largo_unidad}"
-        add_chat_message(username, 'user', msg_text, image_url=image_url, order_id=order_id)
+        # --- FILTRO DE MENSAJES: No guardar tokens ni cadenas sospechosas ---
+        def is_suspicious_message(msg):
+            if not msg:
+                return False
+            # Si es muy largo y sin espacios, probablemente es un token
+            if len(msg) > 40 and ' ' not in msg:
+                return True
+            # Si parece un JWT o CSRF (muchos caracteres base64 y puntos)
+            if re.match(r'^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$', msg):
+                return True
+            # Si contiene la palabra 'csrf' o 'token'
+            if 'csrf' in msg.lower() or 'token' in msg.lower():
+                return True
+            return False
+        if (message and not is_suspicious_message(message)) or image_url:
+            add_chat_message(username, 'user', msg_text, image_url=image_url, order_id=order_id)
         # Registrar en user_purchases.json
         user_purchases = load_user_purchases()
         user_purchases.append({
@@ -533,7 +549,6 @@ def contact_admin():
             'items': new_order['items'],
             'total_price': total_price,
             'payment_method_id': 'contact_admin',
-            'delivery_address': current_user.get('delivery_address', ''),
             'order_date': new_order['order_date'],
             'status': 'pending',
             'admin_message': message
@@ -560,66 +575,91 @@ def user_chat():
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
                 image_url = f"/static/uploads/{filename}"
-        if message or image_url:
+        # --- FILTRO DE MENSAJES: No guardar tokens ni cadenas sospechosas ---
+        def is_suspicious_message(msg):
+            if not msg:
+                return False
+            # Si es muy largo y sin espacios, probablemente es un token
+            if len(msg) > 40 and ' ' not in msg:
+                return True
+            # Si parece un JWT o CSRF (muchos caracteres base64 y puntos)
+            if re.match(r'^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$', msg):
+                return True
+            # Si contiene la palabra 'csrf' o 'token'
+            if 'csrf' in msg.lower() or 'token' in msg.lower():
+                return True
+            return False
+        if (message and not is_suspicious_message(message)) or image_url:
             add_chat_message(username, 'user', message, image_url=image_url)
             flash('Mensaje enviado al administrador.', 'success')
+        else:
+            flash('Mensaje inválido o sospechoso, no se ha enviado.', 'error')
         return redirect(url_for('user_chat'))
     return render_template('user_chat.html', chat_history=chat_history)
 
-@app.errorhandler(404)
-def not_found_error(error):
-    """Maneja errores 404 (Página no encontrada)."""
-    return render_template('error_404.html'), 404
+@app.route('/user/notifications')
+@login_required
+def user_notifications():
+    username = session.get('user_username')
+    notifications = load_notifications().get(username, [])
+    return render_template('user_notifications.html', notifications=notifications)
 
-@app.errorhandler(500)
-def internal_error(error):
-    """Maneja errores 500 (Error interno del servidor)."""
-    logger.exception("Ha ocurrido un error 500:")
-    return render_template('error_500.html'), 500
+@app.route('/user/notification_settings', methods=['GET', 'POST'])
+@login_required
+def notification_settings():
+    username = session.get('user_username')
+    users = load_users()
+    user = users.get(username)
+    if not user:
+        flash('Usuario no encontrado.', 'error')
+        return redirect(url_for('user_auth.user_dashboard'))
+    if request.method == 'POST':
+        notifications_enabled = request.form.get('notifications_enabled') == 'on'
+        user['notifications_enabled'] = notifications_enabled
+        users[username] = user
+        save_users(users)
+        flash('Preferencia de notificaciones actualizada.', 'success')
+        return redirect(url_for('notification_settings'))
+    notifications_enabled = user.get('notifications_enabled', True)
+    return render_template('notification_settings.html', notifications_enabled=notifications_enabled)
 
-# --- Registro de compras de usuarios ---
-USER_PURCHASES_FILE = 'user_purchases.json'
-
-# --- Registro de pedidos de usuarios (debe ser un diccionario) ---
-ORDERS_FILE = 'orders.json'
-
-def load_orders():
-    if not os.path.exists(ORDERS_FILE):
-        return {}
-    with open(ORDERS_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except Exception:
-            return {}
-
-def save_orders(orders):
-    with open(ORDERS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(orders, f, indent=2, ensure_ascii=False)
-
-def load_user_purchases():
-    if not os.path.exists(USER_PURCHASES_FILE):
-        return []
-    with open(USER_PURCHASES_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except Exception:
-            return []
-
-def save_user_purchases(purchases):
-    with open(USER_PURCHASES_FILE, 'w', encoding='utf-8') as f:
-        json.dump(purchases, f, indent=2, ensure_ascii=False)
+@app.route('/admin/create_notification', methods=['GET', 'POST'])
+@admin_required
+def admin_create_notification():
+    users = load_users()
+    usernames = [u for u in users if users[u].get('role') != 'admin']
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        message = request.form.get('message', '').strip()
+        notif_type = request.form.get('notif_type', 'info')
+        target = request.form.get('target', 'all')
+        if not title or not message:
+            flash('Título y mensaje son obligatorios.', 'error')
+            return redirect(url_for('admin_create_notification'))
+        # Enviar a todos o a un usuario
+        if target == 'all':
+            for username in usernames:
+                user = users[username]
+                if user.get('notifications_enabled', True):
+                    add_notification(username, message, notif_type, title=title)
+            flash('Notificación enviada a todos los usuarios que aceptan notificaciones.', 'success')
+        else:
+            user = users.get(target)
+            if user and user.get('notifications_enabled', True):
+                add_notification(target, message, notif_type, title=title)
+                flash(f'Notificación enviada a {target}.', 'success')
+            else:
+                flash('El usuario no existe o no acepta notificaciones.', 'error')
+        return redirect(url_for('admin_dashboard'))
+    return render_template('admin_create_notification.html', usernames=usernames)
 
 def init_app():
     """Inicializa la aplicación Flask, incluyendo la configuración de usuarios y el registro de Blueprints."""
     init_admin_users()
-    
     # Asegúrate de que los archivos de datos existan para evitar errores al cargarlos
     # Las funciones load_x() en data_manager.py deben manejar la creación de listas/diccionarios vacías
     # si los archivos no existen.
 
 if __name__ == '__main__':
-    # La inicialización de la aplicación ahora se maneja en init_app()
-    # Esto es útil si tu aplicación es importada por otros scripts (ej. gunicorn)
-    # y quieres controlar cuándo se inicializa.
     init_app()
     app.run(debug=True)

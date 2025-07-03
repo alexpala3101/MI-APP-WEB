@@ -176,3 +176,18 @@ function updatePasswordStrength(strength) {
             break;
     }
 }
+
+// Toggle de visibilidad de contraseña para cualquier formulario
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.querySelector('i').classList.remove('fa-eye');
+        btn.querySelector('i').classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        btn.querySelector('i').classList.remove('fa-eye-slash');
+        btn.querySelector('i').classList.add('fa-eye');
+    }
+}

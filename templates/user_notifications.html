@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Mis Notificaciones - Marketplace{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-8">
+<div class="user-dashboard-bg min-h-screen max-w-4xl mx-auto px-4 py-8">
     <div class="flex flex-col sm:flex-row justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Mis Notificaciones</h1>
-        <a href="{{ url_for('user_auth.user_dashboard') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
-            <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
-        </a>
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0 w-full text-center sm:text-center">Mis Notificaciones</h1>
+        <div class="flex flex-col items-end w-full sm:w-auto sm:ml-4">
+            <a href="{{ url_for('user_auth.user_dashboard') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold mb-2">
+                <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
+            </a>
+            <a href="{{ url_for('notification_settings') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition shadow font-semibold">
+                <i class="fas fa-cog mr-2"></i>Configuración de notificaciones
+            </a>
+        </div>
     </div>
 
     {% if notifications %}
@@ -103,3 +108,5 @@
     });
 </script>
 {% endblock %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user_dashboard.css') }}">

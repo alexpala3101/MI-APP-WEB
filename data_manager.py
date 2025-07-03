@@ -21,6 +21,7 @@ ORDERS_FILE = os.path.join(DATA_DIR, 'orders.json')
 NOTIFICATIONS_FILE = os.path.join(DATA_DIR, 'notifications.json')
 PAYMENT_METHODS_FILE = os.path.join(DATA_DIR, 'payment_methods.json')
 USER_CARTS_FILE = os.path.join(DATA_DIR, 'user_carts.json')
+USER_PURCHASES_FILE = os.path.join(DATA_DIR, 'user_purchases.json')
 REPORTS_FILE = os.path.join(DATA_DIR, 'reports.json')
 
 # Asegurarse de que el directorio DATA_DIR exista
@@ -98,6 +99,14 @@ def load_user_carts():
 def save_user_carts(user_carts):
     return _save_data(USER_CARTS_FILE, user_carts)
 
+def load_user_purchases():
+    """Carga el historial de compras de todos los usuarios como una lista."""
+    return _load_data(USER_PURCHASES_FILE, default_value=[])
+
+def save_user_purchases(user_purchases):
+    """Guarda el historial de compras de todos los usuarios como una lista."""
+    return _save_data(USER_PURCHASES_FILE, user_purchases)
+
 def load_reports():
     return _load_data(REPORTS_FILE, default_value={})
 
@@ -106,12 +115,11 @@ def save_reports(reports):
 
 # --- Funciones de Utilidad (Notificaciones y Carrito) ---
 
-def add_notification(username, message, notif_type='info'):
+def add_notification(username, message, notif_type='info', title=None):
     """Añade una notificación para un usuario específico."""
     notifications = load_notifications()
     if username not in notifications:
         notifications[username] = []
-    
     new_notification = {
         'id': str(secrets.token_hex(4)),
         'message': message,
@@ -119,6 +127,8 @@ def add_notification(username, message, notif_type='info'):
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'read': False
     }
+    if title:
+        new_notification['title'] = title
     notifications[username].append(new_notification)
     return save_notifications(notifications)
 
@@ -172,6 +182,11 @@ def remove_from_cart(product_id, username=None):
 def update_cart_quantity(product_id, new_quantity, username=None):
     """Actualiza la cantidad de un producto en el carrito."""
     from flask import session # Importar aquí para evitar importación circular
+
+    try:
+        new_quantity = int(new_quantity)
+    except (TypeError, ValueError):
+        return False
 
     if new_quantity <= 0:
         return remove_from_cart(product_id, username)

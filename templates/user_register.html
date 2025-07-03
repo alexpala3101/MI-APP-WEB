@@ -1,43 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Registro de Usuario{% endblock %}
 {% block content %}
-<div class="max-w-md mx-auto mt-12 bg-white p-8 rounded-lg shadow-lg">
-    <h2 class="text-3xl font-bold text-center mb-6 text-gray-800">Registro de Usuario</h2>
-    <form method="post">
-        <div class="mb-4">
-            <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Usuario:</label>
-            <input type="text" id="username" name="username" required
-                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                   minlength="6" maxlength="20" pattern="^[a-zA-Z0-9]*$" title="Debe tener entre 6 y 20 caracteres alfanuméricos.">
-        </div>
-        <div class="mb-4">
-            <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
-            <input type="email" id="email" name="email" required
-                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-        </div>
-        <div class="mb-6">
-            <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Contraseña:</label>
-            <input type="password" id="password" name="password" required
-                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-                   minlength="8" maxlength="20" title="Debe tener entre 8 y 20 caracteres, e incluir mayúsculas, minúsculas, números y símbolos.">
-        </div>
-        <!-- CAMBIO: Añadido el campo para confirmar contraseña -->
-        <div class="mb-6">
-            <label for="confirm_password" class="block text-gray-700 text-sm font-bold mb-2">Confirmar Contraseña:</label>
-            <input type="password" id="confirm_password" name="confirm_password" required
-                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-                   minlength="8" maxlength="20" title="Debe coincidir con la contraseña ingresada.">
-        </div>
-        <!-- FIN DEL CAMBIO -->
-        <div class="flex items-center justify-between">
-            <button type="submit"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition shadow-md">
-                Registrarse <i class="fas fa-user-plus ml-2"></i>
-            </button>
-            <a href="{{ url_for('user_auth.login') }}" class="inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition">
-                ¿Ya tienes cuenta? Inicia sesión
-            </a>
-        </div>
-    </form>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user_dashboard.css') }}">
+<div class="user-dashboard-bg min-h-screen flex items-center justify-center">
+    <div class="user-card p-8 max-w-md w-full">
+        <h2 class="text-3xl font-bold text-center mb-6 text-gray-800">Registro de Usuario</h2>
+        <form method="post">
+            <div class="mb-4">
+                <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Usuario:</label>
+                {{ form.username(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", id="username") }}
+            </div>
+            <div class="mb-4">
+                <label for="full_name" class="block text-gray-700 text-sm font-bold mb-2">Nombre completo:</label>
+                {{ form.full_name(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", id="full_name") }}
+            </div>
+            <div class="mb-4">
+                <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
+                {{ form.email(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", id="email") }}
+            </div>
+            <div class="mb-4">
+                <label for="phone" class="block text-gray-700 text-sm font-bold mb-2">Teléfono:</label>
+                {{ form.phone(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", id="phone") }}
+            </div>
+            <div class="mb-4">
+                <label for="birthdate" class="block text-gray-700 text-sm font-bold mb-2">Fecha de nacimiento:</label>
+                {{ form.birthdate(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", id="birthdate") }}
+            </div>
+            <div class="mb-4">
+                <label for="gender" class="block text-gray-700 text-sm font-bold mb-2">Género:</label>
+                {{ form.gender(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", id="gender") }}
+            </div>
+            <div class="mb-6 relative">
+                <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Contraseña:</label>
+                {{ form.password(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline pr-10", id="password") }}
+                <button type="button" class="absolute right-3 top-9 text-gray-500 focus:outline-none toggle-password" tabindex="-1" onclick="togglePasswordVisibility('password', this)">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            <div class="mb-6 relative">
+                <label for="confirm_password" class="block text-gray-700 text-sm font-bold mb-2">Confirmar Contraseña:</label>
+                {{ form.confirm_password(class_="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline pr-10", id="confirm_password") }}
+                <button type="button" class="absolute right-3 top-9 text-gray-500 focus:outline-none toggle-password" tabindex="-1" onclick="togglePasswordVisibility('confirm_password', this)">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            <div class="flex items-center justify-between">
+                {{ form.submit(class_="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition shadow-md") }}
+            </div>
+        </form>
+    </div>
 </div>
+<script src="{{ url_for('static', filename='js/validation.js') }}"></script>
 {% endblock %}

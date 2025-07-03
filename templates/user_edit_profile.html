@@ -1,40 +1,46 @@
 {% extends "base.html" %}
 {% block title %}Editar Perfil - Marketplace{% endblock %}
 {% block content %}
-<div class="max-w-md mx-auto mt-12 bg-white p-8 rounded-lg shadow-lg">
-    <div class="text-center mb-8 bg-teal-100 p-6 rounded-lg">
-        <i class="fas fa-user-edit text-teal-600 text-5xl mb-4"></i>
-        <h2 class="text-3xl font-bold text-teal-800">Editar Información de Perfil</h2>
-        <p class="text-lg text-gray-700">Actualiza tus datos personales.</p>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user_dashboard.css') }}">
+<div class="user-dashboard-bg min-h-screen flex items-center justify-center">
+    <div class="user-card p-8 max-w-md w-full bg-white rounded-lg shadow-lg">
+        <h2 class="text-3xl font-bold text-center mb-6 text-gray-800">Editar Perfil</h2>
+        <form method="POST" action="{{ url_for('user_auth.user_edit_profile') }}">
+            {{ form.hidden_tag() }}
+            <div class="mb-4">
+                <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Nombre de Usuario:</label>
+                <input type="text" id="username" name="username" value="{{ session.user_username }}" readonly
+                       class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed text-gray-600">
+                <p class="text-xs text-gray-500 mt-1">El nombre de usuario no se puede cambiar.</p>
+            </div>
+            <div class="mb-4">
+                <label for="full_name" class="block text-gray-700 text-sm font-bold mb-2">Nombre Completo:</label>
+                {{ form.full_name(class_="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-teal-500 focus:border-teal-500", id="full_name") }}
+            </div>
+            <div class="mb-4">
+                <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
+                {{ form.email(class_="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-teal-500 focus:border-teal-500", id="email") }}
+            </div>
+            <div class="mb-4">
+                <label for="phone" class="block text-gray-700 text-sm font-bold mb-2">Teléfono:</label>
+                {{ form.phone(class_="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-teal-500 focus:border-teal-500", id="phone") }}
+            </div>
+            <div class="mb-4">
+                <label for="birthdate" class="block text-gray-700 text-sm font-bold mb-2">Fecha de Nacimiento:</label>
+                {{ form.birthdate(class_="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-teal-500 focus:border-teal-500", id="birthdate") }}
+            </div>
+            <div class="mb-4">
+                <label for="gender" class="block text-gray-700 text-sm font-bold mb-2">Género:</label>
+                {{ form.gender(class_="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-teal-500 focus:border-teal-500", id="gender") }}
+            </div>
+            <div class="flex justify-between items-center mt-6">
+                {{ form.submit(class_="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-md font-semibold") }}
+                <a href="{{ url_for('user_auth.user_settings') }}" class="text-gray-600 hover:text-gray-800 transition font-medium">
+                    <i class="fas fa-arrow-left mr-2"></i> Cancelar
+                </a>
+            </div>
+        </form>
     </div>
-    
-    <form method="POST" action="{{ url_for('user_auth.user_edit_profile') }}">
-        <div class="mb-4">
-            <label for="username" class="block text-gray-700 text-sm font-bold mb-2">Nombre de Usuario:</label>
-            <input type="text" id="username" name="username" value="{{ user.username | default('') }}" readonly
-                   class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed text-gray-600">
-            <p class="text-xs text-gray-500 mt-1">El nombre de usuario no se puede cambiar.</p>
-        </div>
-        <div class="mb-4">
-            <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
-            <input type="email" id="email" name="email" value="{{ user.email | default('') }}" required
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-teal-500 focus:border-teal-500">
-        </div>
-        <div class="mb-6">
-            <label for="delivery_address" class="block text-gray-700 text-sm font-bold mb-2">Dirección de Entrega:</label>
-            <textarea id="delivery_address" name="delivery_address" rows="3"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-                      placeholder="Ej: Calle 123 #45-67, Apartamento 8B, Ciudad, País">{{ user.delivery_address | default('') }}</textarea>
-            <p class="text-xs text-gray-500 mt-1">Esta dirección se usará para tus pedidos.</p>
-        </div>
-        <div class="flex justify-between items-center">
-            <button type="submit" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-md font-semibold">
-                <i class="fas fa-save mr-2"></i> Guardar Cambios
-            </button>
-            <a href="{{ url_for('user_auth.user_edit_profile') }}" class="text-gray-600 hover:text-gray-800 transition font-medium">
-                <i class="fas fa-arrow-left mr-2"></i> Cancelar
-            </a>
-        </div>
-    </form>
 </div>
 {% endblock %}

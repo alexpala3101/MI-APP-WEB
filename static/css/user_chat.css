@@ -1,0 +1,172 @@
+/* CSS específico para el chat de usuario, integrado con el diseño moderno y glassmorphism del marketplace */
+
+.user-chat-container {
+  max-width: 700px;
+  margin: var(--spacing-xl) auto 0 auto;
+  background: var(--bg-glass);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+.user-chat-header {
+  border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  padding: var(--spacing-lg) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  box-shadow: var(--shadow-md);
+}
+.user-chat-messages {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: var(--spacing-lg);
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.user-chat-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-bottom: var(--spacing-sm);
+}
+.user-chat-message.admin {
+  align-items: flex-start;
+}
+.user-chat-bubble {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  box-shadow: var(--shadow-sm);
+  max-width: 70%;
+  word-break: break-word;
+  font-size: 1rem;
+  margin-bottom: 2px;
+  position: relative;
+  transition: background 0.2s;
+}
+.user-chat-bubble.admin {
+  background: var(--secondary-gradient);
+  color: var(--text-white);
+}
+.user-chat-meta {
+  font-size: 0.85em;
+  color: var(--text-light);
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+.user-chat-form {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-md);
+  position: relative;
+}
+.user-chat-form textarea {
+  flex: 1;
+  border-radius: var(--border-radius-md);
+  border: 1px solid #d1d5db;
+  padding: var(--spacing-md);
+  font-size: 1rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  resize: none;
+  min-height: 38px;
+  max-height: 80px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.user-chat-form textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+  outline: none;
+}
+.user-chat-form .file-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 8px 14px;
+  font-size: 1.2em;
+  color: var(--primary-color);
+  cursor: pointer;
+  border-radius: var(--border-radius-md);
+  transition: background 0.2s;
+  position: relative;
+  overflow: hidden;
+  height: 40px;
+  min-width: 40px;
+}
+.user-chat-form .file-btn:hover {
+  background: var(--bg-glass);
+}
+.user-chat-form .file-btn input[type="file"] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 2;
+}
+.user-chat-form .send-btn {
+  background: var(--success-gradient);
+  border: none;
+  color: #fff;
+  font-size: 1.4em;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  min-width: 48px;
+}
+.user-chat-form .send-btn:hover {
+  background: var(--success-color);
+}
+.user-chat-image {
+  max-width: 140px;
+  max-height: 140px;
+  border-radius: var(--border-radius-md);
+  margin-top: var(--spacing-xs);
+  box-shadow: var(--shadow-md);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .user-chat-container {
+    padding: var(--spacing-md);
+  }
+  .user-chat-header {
+    font-size: 1.1rem;
+    padding: var(--spacing-md);
+  }
+  .user-chat-form {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+  .user-chat-bubble {
+    font-size: 0.95rem;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  .user-chat-messages {
+    max-height: 250px;
+    padding: var(--spacing-sm);
+  }
+}

@@ -3,6 +3,7 @@ from flask import Blueprint, render_template_string, redirect, url_for, flash, s
 import json
 import os
 from functools import wraps
+from admin_delete_forms import AdminDeleteUserForm
 
 # --- IMPORTACIONES DESDE data_manager.py ---
 # Ahora importamos directamente desde data_manager.py
@@ -90,6 +91,7 @@ ADMIN_USERS_TEMPLATE = """
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <form action="{{ url_for('admin_users.delete_user', username=user.username) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres eliminar al usuario {{ user.username }}?');">
+                                    {{ delete_forms[user.username].hidden_tag() }}
                                     <button type="submit" class="text-red-600 hover:text-red-900">Eliminar</button>
                                 </form>
                             </td>
@@ -122,22 +124,25 @@ def manage_users():
     users = load_users() # Ahora se llama a la función de data_manager.py
     # Convierte el diccionario de usuarios a una lista para facilitar la iteración en la plantilla
     users_list = list(users.values())
-    return render_template_string(ADMIN_USERS_TEMPLATE, title="Gestión de Usuarios", users=users_list)
+    # Crear un formulario de borrado por usuario
+    delete_forms = {u['username']: AdminDeleteUserForm() for u in users_list}
+    return render_template_string(ADMIN_USERS_TEMPLATE, title="Gestión de Usuarios", users=users_list, delete_forms=delete_forms)
 
 @admin_users_bp.route('/admin/users/delete/<string:username>', methods=['POST'])
 @admin_required
 def delete_user(username):
-    """
-    Gestiona la eliminación de un usuario por su nombre de usuario.
-    """
-    users = load_users() # Ahora se llama a la función de data_manager.py
-    if username in users:
-        del users[username]
-        if save_users(users): # Ahora se llama a la función de data_manager.py
-            flash(f'¡Usuario \"{username}\" eliminado exitosamente!', 'success')
+    form = AdminDeleteUserForm()
+    if form.validate_on_submit():
+        users = load_users()
+        if username == 'admin':
+            flash('No puedes eliminar el usuario administrador.', 'error')
+            return redirect(url_for('admin_users.manage_users'))
+        if username in users:
+            del users[username]
+            save_users(users)
+            flash(f'¡Usuario "{username}" eliminado exitosamente!', 'success')
         else:
-            flash(f'Error al eliminar el usuario \"{username}\".', 'error')
+            flash(f'No se pudo eliminar el usuario "{username}" porque no fue encontrado.', 'error')
     else:
-        flash(f'No se pudo eliminar el usuario \"{username}\" porque no fue encontrado.', 'error')
-
+        flash('Solicitud inválida o token CSRF incorrecto.', 'error')
     return redirect(url_for('admin_users.manage_users'))

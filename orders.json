@@ -70,5 +70,29 @@
     "order_date": "2025-07-02 13:14:25",
     "status": "pending",
     "admin_message": "prueba"
+  },
+  "d8f3c08494ba8f39": {
+    "order_id": "d8f3c08494ba8f39",
+    "username": "usuario1",
+    "items": [
+      {
+        "product_id": "3",
+        "name": "Diseños Neos Personalizados",
+        "quantity": 1,
+        "price": 50000.0
+      },
+      {
+        "product_id": "4",
+        "name": "Pantallas Para Imagenes Y Video",
+        "quantity": 1,
+        "price": 1500000.0
+      }
+    ],
+    "total_price": 1550000.0,
+    "payment_method_id": "contact_admin",
+    "delivery_address": "",
+    "order_date": "2025-07-02 15:40:55",
+    "status": "pending",
+    "admin_message": "compra"
   }
 }

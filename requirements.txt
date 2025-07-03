@@ -6,3 +6,6 @@ itsdangerous==2.1.2
 click==8.1.7
 blinker==1.6.3
 PyInstaller==6.1.0
+Flask-WTF>=1.1.1
+WTForms>=3.0.1
+email_validator>=2.0.0

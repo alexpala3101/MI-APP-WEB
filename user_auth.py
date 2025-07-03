@@ -1,6 +1,6 @@
 # user_auth.py
 
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify, abort
 from functools import wraps
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,13 +13,13 @@ import secrets
 # Todas las funciones de carga y guardado de datos deben venir de aquí.
 from data_manager import (
     load_users, save_users, load_products, save_products, load_orders, save_orders,
-    load_notifications, save_notifications, load_payment_methods, save_payment_methods,
-    load_user_carts, save_user_carts,
-    USERS_FILE, NOTIFICATIONS_FILE, PAYMENT_METHODS_FILE, USER_CARTS_FILE
+    load_notifications, save_notifications, load_user_carts, save_user_carts,
+    USERS_FILE, NOTIFICATIONS_FILE, USER_CARTS_FILE
 )
 # Aquí también, importas estas funciones directamente desde data_manager
-from data_manager import add_notification, get_cart, add_to_cart, remove_from_cart, update_cart_quantity, clear_user_persistent_cart
+from data_manager import add_notification, get_cart
 from data_manager_chat import get_user_chats_by_order
+from user_forms import UserLoginForm, UserRegisterForm, UserEditProfileForm, UserChangePasswordForm
 
 
 # Define CART_SESSION_KEY aquí también si es necesario para funciones de carrito internas
@@ -60,93 +60,68 @@ def is_valid_password(password):
 @user_bp.route('/register', methods=['GET', 'POST'])
 def register():
     """Ruta para el registro de nuevos usuarios."""
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        email = request.form['email'].strip()
-        password = request.form['password']
-
+    form = UserRegisterForm()
+    if form.validate_on_submit():
+        username = form.username.data.strip()
+        email = form.email.data.strip()
+        full_name = form.full_name.data.strip()
+        phone = form.phone.data.strip() if form.phone.data else ''
+        birthdate = form.birthdate.data.strftime('%Y-%m-%d') if form.birthdate.data else ''
+        gender = form.gender.data or ''
+        password = form.password.data
         users = load_users()
-
-        # Validaciones
-        if not username or not email or not password:
-            flash('Todos los campos son obligatorios.', 'error')
-            return render_template('user_register.html')
-        
-        if not (6 <= len(username) <= 20) or not username.isalnum():
-            flash('El nombre de usuario debe tener entre 6 y 20 caracteres alfanuméricos.', 'error')
-            return render_template('user_register.html', username=username, email=email)
-
+        # Validaciones personalizadas (puedes mantener las existentes si quieres)
         if any(u_data['username'] == username for u_data in users.values()):
             flash('Nombre de usuario ya existe.', 'error')
-            return render_template('user_register.html', email=email) # Mantener email para comodidad
-
-        if not is_valid_email(email):
-            flash('Formato de email inválido.', 'error')
-            return render_template('user_register.html', username=username) # Mantener username
-
+            return render_template('user_register.html', form=form)
         if any(u_data['email'] == email for u_data in users.values()):
             flash('Este email ya está registrado.', 'error')
-            return render_template('user_register.html', username=username)
-
-        if not is_valid_password(password):
-            flash('La contraseña debe tener entre 8 y 20 caracteres, e incluir al menos una mayúscula, una minúscula, un número y un símbolo.', 'error')
-            return render_template('user_register.html', username=username, email=email)
-
-        # Hashear la contraseña antes de guardar
+            return render_template('user_register.html', form=form)
         hashed_password = generate_password_hash(password)
-
-        # Guardar el usuario usando el username como clave
         users[username] = {
             'username': username,
             'email': email,
-            'password': hashed_password, # Guardar el hash
-            'role': 'user', # Rol por defecto
+            'full_name': full_name,
+            'phone': phone,
+            'birthdate': birthdate,
+            'gender': gender,
+            'password': hashed_password,
+            'role': 'user',
             'registration_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'last_login': None,
             'is_active': True,
-            'delivery_address': '', # Dirección de entrega por defecto
-            'payment_methods': [] # Métodos de pago vacíos por defecto
+            'delivery_address': ''
         }
         save_users(users)
         flash('Registro exitoso. ¡Ahora puedes iniciar sesión!', 'success')
         return redirect(url_for('user_auth.login'))
-    return render_template('user_register.html')
-
+    return render_template('user_register.html', form=form)
 
 @user_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Ruta para el inicio de sesión de usuarios."""
-    if request.method == 'POST':
-        username_or_email = request.form['username'].strip() # Aceptar usuario o email
-        password = request.form['password']
-
+    form = UserLoginForm()
+    if form.validate_on_submit():
+        username_or_email = form.username.data.strip()
+        password = form.password.data
         users = load_users()
         user = None
-
-        # Intenta encontrar usuario por username o email
         for u_data in users.values():
             if u_data['username'] == username_or_email or u_data['email'] == username_or_email:
                 user = u_data
                 break
-
-        if user:
-            # Usar check_password_hash para verificar la contraseña
-            # Compara la contraseña ingresada con el hash almacenado de forma segura
-            if check_password_hash(user['password'], password):
-                session.permanent = True # Hacer la sesión permanente
-                session['user_logged_in'] = True
-                session['user_username'] = user['username']
-                session['user_email'] = user['email']
-                user['last_login'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                save_users(users)
-                flash(f'¡Bienvenido de nuevo, {user["username"]}!', 'success')
-                return redirect(url_for('user_auth.user_dashboard'))
-            else:
-                flash('Contraseña incorrecta.', 'error')
+        if user and check_password_hash(user['password'], password):
+            session.permanent = True
+            session['user_logged_in'] = True
+            session['user_username'] = user['username']
+            session['user_email'] = user['email']
+            user['last_login'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            save_users(users)
+            flash(f'¡Bienvenido de nuevo, {user["username"]}!', 'success')
+            return redirect(url_for('user_auth.user_dashboard'))
         else:
-            flash('Usuario o email no encontrado.', 'error')
-
-    return render_template('user_login.html')
+            flash('Usuario, email o contraseña incorrectos.', 'error')
+    return render_template('user_login.html', form=form)
 
 @user_bp.route('/dashboard')
 @login_required
@@ -165,57 +140,36 @@ def user_dashboard():
 @user_bp.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
 def user_edit_profile():
-    """Permite al usuario editar su perfil."""
+    """Permite al usuario editar sus datos personales y dirección."""
     username = session.get('user_username')
     users = load_users()
     user = users.get(username)
-
+    form = UserEditProfileForm(obj=user)
     if not user:
-        flash('Error: Usuario no encontrado.', 'error')
-        return redirect(url_for('user_auth.user_dashboard'))
-
-    if request.method == 'POST':
-        # Los campos de username y email no deben ser editables aquí si son usados para login
-        # Si se permiten cambios, deben validarse cuidadosamente (ej. unicidad)
-        new_email = request.form.get('email', '').strip()
-        new_delivery_address = request.form.get('delivery_address', '').strip()
-        current_password = request.form.get('current_password', '')
-        new_password = request.form.get('new_password', '')
-
-        # Validación de email
-        if new_email and new_email != user['email']:
-            if not is_valid_email(new_email):
-                flash('Formato de email inválido.', 'error')
-                return render_template('user_edit_profile.html', user=user)
-            if any(u_data['email'] == new_email for u_data in users.values() if u_data['username'] != username):
-                flash('Este email ya está en uso por otra cuenta.', 'error')
-                return render_template('user_edit_profile.html', user=user)
-            user['email'] = new_email
-
-        user['delivery_address'] = new_delivery_address
-
-        # Cambio de contraseña
-        if new_password:
-            if not current_password or not check_password_hash(user['password'], current_password):
-                flash('Contraseña actual incorrecta.', 'error')
-                return render_template('user_edit_profile.html', user=user)
-            
-            if not is_valid_password(new_password):
-                flash('La nueva contraseña no cumple con los requisitos de seguridad.', 'error')
-                return render_template('user_edit_profile.html', user=user)
-            
-            user['password'] = generate_password_hash(new_password)
-            flash('Contraseña actualizada con éxito.', 'success')
-        
+        flash('Error al cargar los datos del usuario.', 'error')
+        return redirect(url_for('user_auth.login'))
+    if form.validate_on_submit():
+        user['full_name'] = form.full_name.data.strip()
+        user['email'] = form.email.data.strip()
+        user['phone'] = form.phone.data.strip() if form.phone.data else ''
+        user['birthdate'] = form.birthdate.data.strftime('%Y-%m-%d') if form.birthdate.data else ''
+        user['gender'] = form.gender.data or ''
+        users[username] = user
         save_users(users)
-        flash('Perfil actualizado con éxito.', 'success')
-        # Actualizar email en sesión si ha cambiado
-        if 'user_email' in session and session['user_email'] != user['email']:
-            session['user_email'] = user['email']
-            
-        return redirect(url_for('user_auth.user_dashboard'))
-
-    return render_template('user_edit_profile.html', user=user)
+        flash('Perfil actualizado correctamente.', 'success')
+        return redirect(url_for('user_auth.user_profile'))
+    # Pre-cargar datos actuales si es GET
+    if request.method == 'GET':
+        form.full_name.data = user.get('full_name', '')
+        form.email.data = user.get('email', '')
+        form.phone.data = user.get('phone', '')
+        if user.get('birthdate'):
+            try:
+                form.birthdate.data = datetime.strptime(user['birthdate'], '%Y-%m-%d').date()
+            except Exception:
+                form.birthdate.data = None
+        form.gender.data = user.get('gender', '')
+    return render_template('user_edit_profile.html', form=form)
 
 @user_bp.route('/orders')
 @login_required
@@ -302,104 +256,6 @@ def delete_account():
     flash('Error al intentar eliminar la cuenta.', 'error')
     return redirect(url_for('user_auth.user_privacy'))
 
-@user_bp.route('/payment_methods', methods=['GET'])
-@login_required
-def user_payment_methods():
-    """Muestra los métodos de pago del usuario."""
-    username = session.get('user_username')
-    users = load_users()
-    user = users.get(username)
-    
-    if not user:
-        flash('Usuario no encontrado.', 'error')
-        return redirect(url_for('user_auth.user_dashboard'))
-
-    payment_methods = user.get('payment_methods', [])
-    return render_template('user_payment_methods.html', payment_methods=payment_methods)
-
-@user_bp.route('/payment_methods/add', methods=['GET', 'POST'])
-@login_required
-def add_payment_method():
-    """Permite al usuario añadir un nuevo método de pago."""
-    username = session.get('user_username')
-    users = load_users()
-    user = users.get(username)
-
-    if not user:
-        flash('Usuario no encontrado.', 'error')
-        return redirect(url_for('user_auth.user_dashboard'))
-
-    if request.method == 'POST':
-        card_number = request.form.get('card_number', '').strip()
-        card_holder = request.form.get('card_holder', '').strip()
-        expiry_date = request.form.get('expiry_date', '').strip() # MM/AA
-        cvv = request.form.get('cvv', '').strip()
-
-        # Validaciones básicas (puedes añadir más regex para número de tarjeta, CVV, etc.)
-        if not all([card_number, card_holder, expiry_date, cvv]):
-            flash('Todos los campos son obligatorios.', 'error')
-            return render_template('add_payment_method.html')
-
-        if not re.fullmatch(r'\d{16}', card_number):
-            flash('Número de tarjeta inválido (debe ser 16 dígitos).', 'error')
-            return render_template('add_payment_method.html', card_holder=card_holder, expiry_date=expiry_date)
-        
-        if not re.fullmatch(r'\d{3,4}', cvv):
-            flash('CVV inválido (3 o 4 dígitos).', 'error')
-            return render_template('add_payment_method.html', card_holder=card_holder, expiry_date=expiry_date, card_number=card_number)
-
-        # Aquí no se guardan datos sensibles directamente, solo una representación.
-        # En una aplicación real, se usaría un proveedor de pagos.
-        new_method = {
-            'id': secrets.token_hex(6), # ID único para el método de pago
-            'type': 'Tarjeta de Crédito/Débito',
-            'last_four': card_number[-4:],
-            'expiry_date': expiry_date,
-            'holder_name': card_holder,
-            'added_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        user_payment_methods = user.get('payment_methods', [])
-        user_payment_methods.append(new_method)
-        user['payment_methods'] = user_payment_methods
-        
-        if save_users(users):
-            flash('Método de pago añadido con éxito.', 'success')
-            return redirect(url_for('user_auth.user_payment_methods'))
-        else:
-            flash('Error al añadir el método de pago.', 'error')
-
-    return render_template('add_payment_method.html')
-
-@user_bp.route('/payment_methods/delete/<method_id>', methods=['POST'])
-@login_required
-def delete_payment_method(method_id):
-    """Permite al usuario eliminar un método de pago existente."""
-    username = session.get('user_username')
-    users = load_users()
-    user = users.get(username)
-
-    if not user:
-        flash('Usuario no encontrado.', 'error')
-        return redirect(url_for('user_auth.user_dashboard'))
-
-    updated_payment_methods = [
-        method for method in user.get('payment_methods', []) 
-        if method['id'] != method_id
-    ]
-
-    if len(updated_payment_methods) < len(user.get('payment_methods', [])):
-        user['payment_methods'] = updated_payment_methods
-        if save_users(users):
-            flash('Método de pago eliminado con éxito.', 'success')
-        else:
-            flash('Error al eliminar el método de pago.', 'error')
-    else:
-        flash('Método de pago no encontrado o no autorizado para eliminar.', 'error')
-    
-    return redirect(url_for('user_auth.user_payment_methods'))
-
-
 @user_bp.route('/logout')
 def logout():
     """Cierra la sesión del usuario."""
@@ -445,6 +301,49 @@ def delete_order(order_id):
         pass
     flash('Pedido cancelado correctamente.', 'success')
     return redirect(url_for('user_auth.user_orders'))
+
+@user_bp.route('/profile')
+@login_required
+def user_profile():
+    """Muestra el perfil profesional del usuario con todos los datos personales."""
+    username = session.get('user_username')
+    users = load_users()
+    user = users.get(username)
+    if not user:
+        flash('Error al cargar los datos del usuario.', 'error')
+        return redirect(url_for('user_auth.login'))
+    return render_template('user_profile.html', user=user)
+
+@user_bp.route('/change_password', methods=['GET', 'POST'])
+def user_change_password():
+    """Permite al usuario cambiar su contraseña de forma segura."""
+    username = session.get('user_username')
+    users = load_users()
+    user = users.get(username)
+    form = UserChangePasswordForm()
+    if not user:
+        flash('Error: Usuario no encontrado.', 'error')
+        return redirect(url_for('user_auth.login'))
+    if form.validate_on_submit():
+        current_password = form.current_password.data
+        new_password = form.new_password.data
+        if not check_password_hash(user['password'], current_password):
+            flash('La contraseña actual es incorrecta.', 'error')
+            return render_template('user_change_password.html', form=form)
+        if check_password_hash(user['password'], new_password):
+            flash('La nueva contraseña no puede ser igual a la anterior.', 'error')
+            return render_template('user_change_password.html', form=form)
+        user['password'] = generate_password_hash(new_password)
+        save_users(users)
+        flash('Contraseña actualizada correctamente.', 'success')
+        return redirect(url_for('user_auth.user_profile'))
+    return render_template('user_change_password.html', form=form)
+
+@user_bp.route('/settings')
+@login_required
+def user_settings():
+    """Muestra la página de configuración de cuenta del usuario."""
+    return render_template('user_settings.html')
 
 # --- RUTAS DE ADMINISTRACIÓN (ejemplo básico) ---
 # Si estas rutas estaban aquí, deberían estar en un blueprint de administrador separado.

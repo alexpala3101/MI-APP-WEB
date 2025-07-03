@@ -13,7 +13,6 @@
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Fecha</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Total</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Método de Pago</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Dirección</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Productos</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">Estado</th>
                 </tr>
@@ -26,7 +25,6 @@
                     <td class="px-6 py-4 text-sm text-gray-700">{{ p.order_date }}</td>
                     <td class="px-6 py-4 text-sm text-green-700 font-bold">${{ '%.2f'|format(p.total_price) }}</td>
                     <td class="px-6 py-4 text-sm text-gray-700">{{ p.payment_method_id }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ p.delivery_address }}</td>
                     <td class="px-6 py-4 text-sm">
                         <ul class="list-disc pl-5">
                         {% for item in p['items'] %}

@@ -35,5 +35,41 @@
     "updated_at": "2025-06-14T16:31:39.159703",
     "stock": 6,
     "image_url": "https://es.huasuny.com/uploadfile/202101/20/2070a58080071376df30d5c740f4f50c_medium.jpg"
+  },
+  "5": {
+    "id": 5,
+    "name": "Luces led RGB",
+    "description": "Decora lo que tu quieras",
+    "price": 45000.0,
+    "stock": 4,
+    "image_url": "https://neonledstrip.com/wp-content/uploads/2024/09/What-are-Addressable-RGB-LED-Strip.webp",
+    "category": "tira led"
+  },
+  "6": {
+    "id": 6,
+    "name": "Cinta neon flex",
+    "description": "disponible en 12 colores",
+    "price": 7000.0,
+    "stock": 12,
+    "image_url": "https://importnova.com/wp-content/uploads/2016/07/neon-flex-12-voltios-importnova.jpg",
+    "category": "neon"
+  },
+  "7": {
+    "id": 7,
+    "name": "Cuadros Con Neon Flex",
+    "description": "Trae tu cuadro nosotros te lo decoramos",
+    "price": 70000.0,
+    "stock": 4,
+    "image_url": "https://neon51.com/cdn/shop/files/Cuadro_Neon_Gangster.jpg?v=1739142829&width=550",
+    "category": "neon"
+  },
+  "8": {
+    "id": 8,
+    "name": "Tarjetas de control",
+    "description": "compra tus componentes del modulo",
+    "price": 90000.0,
+    "stock": 3,
+    "image_url": "https://image.made-in-china.com/155f0j00gombkKnhEaqt/HD-Wf2-LED-Module-Control-Card.webp",
+    "category": "Componentes "
   }
 }

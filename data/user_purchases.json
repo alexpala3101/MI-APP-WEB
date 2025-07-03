@@ -1,1 +1,50 @@
-[]
+[
+    {
+        "order_id": "43d94e594ccb873a",
+        "username": "usuario1",
+        "items": [
+            {
+                "product_id": "1",
+                "name": "Tableros electronicos P10",
+                "quantity": 1,
+                "price": 330000.0
+            }
+        ],
+        "total_price": 330000.0,
+        "payment_method_id": "contact_admin",
+        "delivery_address": "",
+        "order_date": "2025-07-03 09:35:50",
+        "status": "pending",
+        "admin_message": "da"
+    },
+    {
+        "order_id": "c81a9f43cfd43017",
+        "username": "usuario1",
+        "items": [
+            {
+                "product_id": "1",
+                "name": "Tableros electronicos P10",
+                "quantity": 1,
+                "price": 330000.0
+            },
+            {
+                "product_id": "2",
+                "name": "Tableros electronicos RGB",
+                "quantity": 1,
+                "price": 480000.0
+            },
+            {
+                "product_id": "3",
+                "name": "Dise\u00f1os Neos Personalizados",
+                "quantity": 1,
+                "price": 50000.0
+            }
+        ],
+        "total_price": 860000.0,
+        "payment_method_id": "contact_admin",
+        "delivery_address": "",
+        "order_date": "2025-07-03 11:45:34",
+        "status": "pending",
+        "admin_message": "crea mi dise\u00f1o"
+    }
+]

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Crear Notificación - Admin{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto mt-12 bg-white/80 rounded-2xl shadow-2xl p-8 glassmorphism">
+    <h1 class="text-3xl font-extrabold text-center text-yellow-700 mb-8 flex items-center justify-center gap-2">
+        <i class="fas fa-bell"></i> Crear Nueva Notificación
+    </h1>
+    <form method="POST" class="space-y-6">
+        <div>
+            <label for="title" class="block text-lg font-semibold text-gray-700 mb-2">Título</label>
+            <input type="text" id="title" name="title" class="w-full px-4 py-2 rounded-lg border border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:outline-none" maxlength="60" required>
+        </div>
+        <div>
+            <label for="message" class="block text-lg font-semibold text-gray-700 mb-2">Mensaje</label>
+            <textarea id="message" name="message" rows="4" class="w-full px-4 py-2 rounded-lg border border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:outline-none" maxlength="300" required></textarea>
+        </div>
+        <div>
+            <label for="notif_type" class="block text-lg font-semibold text-gray-700 mb-2">Tipo</label>
+            <select id="notif_type" name="notif_type" class="w-full px-4 py-2 rounded-lg border border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:outline-none">
+                <option value="info">Información</option>
+                <option value="oferta">Oferta</option>
+                <option value="actualizacion">Actualización</option>
+                <option value="reporte_respuesta">Respuesta a Reporte</option>
+                <option value="compra">Compra</option>
+            </select>
+        </div>
+        <div>
+            <label for="target" class="block text-lg font-semibold text-gray-700 mb-2">Enviar a</label>
+            <select id="target" name="target" class="w-full px-4 py-2 rounded-lg border border-yellow-400 focus:ring-2 focus:ring-yellow-500 focus:outline-none">
+                <option value="all">Todos los usuarios</option>
+                {% for username in usernames %}
+                    <option value="{{ username }}">{{ username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex justify-between items-center mt-8">
+            <a href="{{ url_for('admin_dashboard') }}" class="bg-gray-400 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold transition flex items-center gap-2"><i class="fas fa-arrow-left"></i> Volver</a>
+            <button type="submit" class="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white px-8 py-2 rounded-lg font-bold shadow hover:from-yellow-500 hover:to-yellow-700 transition flex items-center gap-2"><i class="fas fa-paper-plane"></i> Enviar Notificación</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
